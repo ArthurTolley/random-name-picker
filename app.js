@@ -1,5 +1,3 @@
-// Random Name Picker - Main Application
-
 class RandomNamePicker {
     constructor() {
         this.names = [];
