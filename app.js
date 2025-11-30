@@ -1270,15 +1270,42 @@ class RandomNamePicker {
             // Spotlight state
             let spotlightX = width / 2;
             let spotlightY = height / 2;
-            let targetX = width / 2;
-            let targetY = height / 2;
-            let spotlightRadius = 80;
+            let spotlightRadius = 100;
             
-            const duration = 8000; // 8 seconds total
+            // Randomize duration (5-9 seconds) and sweep speed
+            const sweepDuration = 3000 + Math.random() * 3000; // 3-6 seconds sweeping
+            const homingDuration = 500; // 0.5 seconds homing
+            const duration = sweepDuration + homingDuration + 1000; // Plus 1s locked
+            
             const startTime = Date.now();
-            let phase = 'searching'; // searching, narrowing, locked
-            let narrowingStart = 0;
+            let phase = 'sweeping'; // sweeping, homing, locked
+            let homingStart = 0;
             let lockedTime = 0;
+            
+            // Pre-calculate the winner position
+            const winnerPos = namePositions.find(p => p.isWinner);
+            
+            // Create a smooth sweep path that visits different areas and ends near the winner
+            // Randomize the sweep pattern each time
+            const sweepPoints = [];
+            const numSweeps = 2 + Math.floor(Math.random() * 3); // 2-4 sweeps (varies more)
+            
+            // Generate random sweep waypoints, with the last one near the winner
+            for (let i = 0; i < numSweeps; i++) {
+                if (i === numSweeps - 1) {
+                    // Last waypoint should be near (but not exactly on) the winner
+                    sweepPoints.push({
+                        x: winnerPos.x + (Math.random() - 0.5) * 100,
+                        y: winnerPos.y + (Math.random() - 0.5) * 50
+                    });
+                } else {
+                    // Random positions across the canvas
+                    sweepPoints.push({
+                        x: 50 + Math.random() * (width - 100),
+                        y: 50 + Math.random() * (height - 100)
+                    });
+                }
+            }
             
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
             
@@ -1302,60 +1329,62 @@ class RandomNamePicker {
                 });
                 
                 // Update spotlight position based on phase
-                if (phase === 'searching') {
-                    // Erratic movement - pick random targets
-                    if (Math.random() < 0.05 || (targetX === spotlightX && targetY === spotlightY)) {
-                        const randomPos = namePositions[Math.floor(Math.random() * namePositions.length)];
-                        targetX = randomPos.x;
-                        targetY = randomPos.y;
+                if (phase === 'sweeping') {
+                    // Sweep through waypoints
+                    const sweepProgress = Math.min(1, elapsed / sweepDuration);
+                    
+                    // Figure out which segment we're in
+                    const totalSegments = sweepPoints.length;
+                    const segmentProgress = sweepProgress * totalSegments;
+                    const currentSegment = Math.min(Math.floor(segmentProgress), totalSegments - 1);
+                    const segmentT = segmentProgress - currentSegment;
+                    
+                    // Ease the segment transition
+                    const easedT = segmentT < 0.5 
+                        ? 2 * segmentT * segmentT 
+                        : 1 - Math.pow(-2 * segmentT + 2, 2) / 2;
+                    
+                    // Get start and end points for this segment
+                    const startPoint = currentSegment === 0 
+                        ? { x: width / 2, y: height / 2 } 
+                        : sweepPoints[currentSegment - 1];
+                    const endPoint = sweepPoints[currentSegment];
+                    
+                    // Interpolate position
+                    spotlightX = startPoint.x + (endPoint.x - startPoint.x) * easedT;
+                    spotlightY = startPoint.y + (endPoint.y - startPoint.y) * easedT;
+                    
+                    // Transition to homing phase
+                    if (elapsed > sweepDuration) {
+                        phase = 'homing';
+                        homingStart = Date.now();
                     }
+                } else if (phase === 'homing') {
+                    // Smoothly home in on the winner
+                    const homeElapsed = Date.now() - homingStart;
+                    const homeProgress = Math.min(1, homeElapsed / homingDuration);
                     
-                    // Move towards target with some wobble
-                    const speed = 0.08;
-                    spotlightX += (targetX - spotlightX) * speed + (Math.random() - 0.5) * 10;
-                    spotlightY += (targetY - spotlightY) * speed + (Math.random() - 0.5) * 10;
+                    // Ease out cubic for smooth deceleration
+                    const eased = 1 - Math.pow(1 - homeProgress, 3);
                     
-                    // Keep in bounds
-                    spotlightX = Math.max(50, Math.min(width - 50, spotlightX));
-                    spotlightY = Math.max(50, Math.min(height - 50, spotlightY));
+                    // Interpolate from current position to winner
+                    const startX = sweepPoints[sweepPoints.length - 1].x;
+                    const startY = sweepPoints[sweepPoints.length - 1].y;
+                    spotlightX = startX + (winnerPos.x - startX) * eased;
+                    spotlightY = startY + (winnerPos.y - startY) * eased;
                     
-                    // Transition to narrowing phase
-                    if (progress > 0.7) {
-                        phase = 'narrowing';
-                        narrowingStart = Date.now();
-                        // Find winner position
-                        const winnerPos = namePositions.find(p => p.isWinner);
-                        targetX = winnerPos.x;
-                        targetY = winnerPos.y;
-                    }
-                } else if (phase === 'narrowing') {
-                    // Slow down and sweep between two names before locking
-                    const narrowElapsed = Date.now() - narrowingStart;
-                    const winnerPos = namePositions.find(p => p.isWinner);
+                    // Shrink spotlight slightly as we focus
+                    spotlightRadius = 100 - homeProgress * 30;
                     
-                    // Oscillate near winner
-                    const oscillation = Math.sin(narrowElapsed / 200) * 100 * Math.max(0, 1 - narrowElapsed / 2000);
-                    targetX = winnerPos.x + oscillation;
-                    targetY = winnerPos.y;
-                    
-                    spotlightX += (targetX - spotlightX) * 0.1;
-                    spotlightY += (targetY - spotlightY) * 0.1;
-                    
-                    // Shrink spotlight
-                    spotlightRadius = Math.max(50, 80 - narrowElapsed / 50);
-                    
-                    if (narrowElapsed > 2000) {
+                    if (homeElapsed > homingDuration) {
                         phase = 'locked';
                         lockedTime = Date.now();
-                        targetX = winnerPos.x;
-                        targetY = winnerPos.y;
                     }
                 } else if (phase === 'locked') {
-                    // Lock onto winner
-                    const winnerPos = namePositions.find(p => p.isWinner);
-                    spotlightX += (winnerPos.x - spotlightX) * 0.3;
-                    spotlightY += (winnerPos.y - spotlightY) * 0.3;
-                    spotlightRadius = 60;
+                    // Snap to winner and hold
+                    spotlightX = winnerPos.x;
+                    spotlightY = winnerPos.y;
+                    spotlightRadius = 70;
                 }
                 
                 // Create spotlight effect using clipping
