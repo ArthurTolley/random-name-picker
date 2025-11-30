@@ -223,6 +223,10 @@ class RandomNamePicker {
     updateAnimations() {
         this.drawWheel();
         this.setupSlots();
+        this.drawClawPreview();
+        this.drawRacePreview();
+        this.drawBattlePreview();
+        this.drawSpotlightPreview();
     }
 
     // Pick Name
@@ -479,6 +483,344 @@ class RandomNamePicker {
             
             animate();
         });
+    }
+
+    // Claw Machine Preview
+    drawClawPreview() {
+        if (this.names.length === 0) return;
+        
+        const canvas = this.clawCanvas;
+        const ctx = this.clawCtx;
+        const dpr = window.devicePixelRatio || 1;
+        
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const width = rect.width;
+        const height = rect.height;
+        
+        const animalEmojis = ['🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐰', '🦊', '🐶', '🐱', '🐮', '🐔', '🐧', '🐺', '🐹', '🦉', '🐦', '🐤', '🐙', '🐝', '🐢'];
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+        
+        // Draw arcade machine frame
+        ctx.fillStyle = '#2d1f3d';
+        ctx.fillRect(0, 0, width, 80);
+        ctx.fillStyle = '#3d2f4d';
+        ctx.fillRect(0, height - 150, width, 150);
+        
+        // Glass area
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillRect(10, 85, width - 20, height - 240);
+        
+        // Chute
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath();
+        ctx.moveTo(width - 120, 80);
+        ctx.lineTo(width - 40, 80);
+        ctx.lineTo(width - 60, height - 30);
+        ctx.lineTo(width - 100, height - 30);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw animals in pit
+        const pitWidth = width - 160;
+        const animalSize = 55;
+        const maxPerRow = Math.floor(pitWidth / animalSize);
+        const totalAnimals = this.names.length;
+        const row1Count = totalAnimals <= maxPerRow ? totalAnimals : Math.ceil(totalAnimals / 2);
+        const row2Count = totalAnimals - row1Count;
+        
+        this.names.forEach((name, i) => {
+            let x, y;
+            if (i < row1Count) {
+                const rowSpacing = pitWidth / row1Count;
+                x = 40 + i * rowSpacing + rowSpacing / 2;
+                y = height - 70;
+            } else {
+                const rowIndex = i - row1Count;
+                const rowSpacing = pitWidth / row2Count;
+                x = 40 + rowIndex * rowSpacing + rowSpacing / 2;
+                y = height - 125;
+            }
+            
+            ctx.save();
+            ctx.translate(x, y);
+            
+            // Circular background
+            ctx.beginPath();
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = colors[i % colors.length];
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Emoji
+            ctx.font = '28px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(animalEmojis[i % animalEmojis.length], 0, 2);
+            
+            // Name tag
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fillRect(-25, 27, 50, 14);
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 8px Poppins';
+            ctx.fillText(name, 0, 35);
+            
+            ctx.restore();
+        });
+        
+        // Draw claw at top center
+        const clawX = width / 2;
+        const clawY = 50;
+        ctx.save();
+        ctx.translate(clawX, clawY);
+        ctx.fillStyle = '#888';
+        ctx.fillRect(-8, -50, 16, 50);
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.save();
+        ctx.rotate(-0.4);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, 35);
+        ctx.lineTo(-10, 45);
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.rotate(0.4);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, 35);
+        ctx.lineTo(10, 45);
+        ctx.stroke();
+        ctx.restore();
+        ctx.restore();
+        
+        // Claw rail
+        ctx.fillStyle = '#444';
+        ctx.fillRect(20, 40, width - 40, 8);
+    }
+
+    // Race Preview
+    drawRacePreview() {
+        if (this.names.length === 0) return;
+        
+        const canvas = this.raceCanvas;
+        const ctx = this.raceCtx;
+        const dpr = window.devicePixelRatio || 1;
+        
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const width = rect.width;
+        const height = rect.height;
+        
+        const racerEmojis = ['🐎', '🚗', '🐢', '🚀', '🏃', '🐇', '🦊', '🐕', '🚲', '🛵'];
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+        
+        const laneHeight = Math.min(60, (height - 100) / this.names.length);
+        const startX = 80;
+        const finishX = width - 100;
+        
+        // Sky
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(0, 0, width, height * 0.6);
+        
+        // Grass
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(0, height * 0.6, width, height * 0.4);
+        
+        // Track
+        ctx.fillStyle = '#d4a574';
+        ctx.fillRect(0, 30, width, height - 60);
+        
+        // Lanes
+        this.names.forEach((_, i) => {
+            const y = 50 + i * laneHeight;
+            ctx.strokeStyle = '#fff';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+        
+        // Start line
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(startX - 5, 30, 10, height - 60);
+        
+        // Finish line (checkered)
+        for (let i = 0; i < Math.ceil((height - 60) / 15); i++) {
+            for (let j = 0; j < 3; j++) {
+                ctx.fillStyle = (i + j) % 2 === 0 ? '#000' : '#fff';
+                ctx.fillRect(finishX + j * 15, 30 + i * 15, 15, 15);
+            }
+        }
+        
+        // Draw racers at start
+        this.names.forEach((name, i) => {
+            const x = startX;
+            const y = 50 + i * laneHeight + laneHeight / 2;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            
+            // Circular background
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = colors[i % colors.length];
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Emoji
+            const noFlipEmojis = ['🚀'];
+            const emoji = racerEmojis[i % racerEmojis.length];
+            ctx.save();
+            if (!noFlipEmojis.includes(emoji)) {
+                ctx.scale(-1, 1);
+            }
+            ctx.font = '28px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(emoji, 0, 0);
+            ctx.restore();
+            
+            // Name tag
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fillRect(-30, -35, 60, 18);
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px Poppins';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(name, 0, -26);
+            
+            ctx.restore();
+        });
+    }
+
+    // Battle Royale Preview
+    drawBattlePreview() {
+        if (this.names.length === 0) return;
+        
+        const canvas = this.battleCanvas;
+        const ctx = this.battleCtx;
+        const dpr = window.devicePixelRatio || 1;
+        
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const width = rect.width;
+        const height = rect.height;
+        
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+        
+        // Dark background
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Title
+        ctx.fillStyle = '#ff6b6b';
+        ctx.font = 'bold 24px Poppins';
+        ctx.textAlign = 'center';
+        ctx.fillText(`⚔️ BATTLE ROYALE - ${this.names.length} Contestants ⚔️`, width / 2, 30);
+        
+        // Grid of contestants
+        const cols = Math.ceil(Math.sqrt(this.names.length));
+        const rows = Math.ceil(this.names.length / cols);
+        const cellWidth = (width - 40) / cols;
+        const cellHeight = (height - 100) / rows;
+        
+        this.names.forEach((name, i) => {
+            const x = 20 + (i % cols) * cellWidth + cellWidth / 2;
+            const y = 50 + Math.floor(i / cols) * cellHeight + cellHeight / 2;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            
+            const boxWidth = cellWidth - 10;
+            const boxHeight = cellHeight - 10;
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.roundRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, 8);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = `bold ${Math.min(16, cellWidth / 6)}px Poppins`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(name, 0, 0);
+            
+            ctx.restore();
+        });
+    }
+
+    // Spotlight Preview
+    drawSpotlightPreview() {
+        if (this.names.length === 0) return;
+        
+        const canvas = this.spotlightCanvas;
+        const ctx = this.spotlightCtx;
+        const dpr = window.devicePixelRatio || 1;
+        
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const width = rect.width;
+        const height = rect.height;
+        
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+        
+        // Dark background
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Grid of names
+        const cols = Math.ceil(Math.sqrt(this.names.length));
+        const rows = Math.ceil(this.names.length / cols);
+        const cellWidth = (width - 60) / cols;
+        const cellHeight = (height - 80) / rows;
+        
+        this.names.forEach((name, i) => {
+            const x = 30 + (i % cols) * cellWidth + cellWidth / 2;
+            const y = 60 + Math.floor(i / cols) * cellHeight + cellHeight / 2;
+            
+            ctx.fillStyle = colors[i % colors.length] + '66'; // Semi-dimmed
+            ctx.font = 'bold 16px Poppins';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(name, x, y);
+        });
+        
+        // Draw spotlight hint in center
+        const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, 100);
+        gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+        gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+        ctx.beginPath();
+        ctx.arc(width / 2, height / 2, 100, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
     }
 
     // Claw Machine Animation
