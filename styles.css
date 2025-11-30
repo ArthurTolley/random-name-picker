@@ -52,14 +52,20 @@ body {
 }
 
 .sidebar .animation-options {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
 }
 
 .sidebar .animation-btn {
-    flex: 1;
-    padding: 10px 8px;
+    padding: 6px 4px;
     min-width: auto;
+    flex: none;
+    font-size: 0.75rem;
+}
+
+.sidebar .animation-btn .animation-icon {
+    font-size: 1.1rem;
 }
 
 .name-input-container {
@@ -352,6 +358,38 @@ body {
     font-weight: 600;
     color: var(--text);
     width: 100%;
+}
+
+/* Claw Machine */
+#clawCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* Race Animation */
+#raceCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 60%, #228B22 60%, #228B22 100%);
+}
+
+/* Battle Royale Animation */
+#battleCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: #1a1a2e;
+}
+
+/* Spotlight Animation */
+#spotlightCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: #1a1a2e;
 }
 
 /* Winner Modal */

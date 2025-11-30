@@ -34,6 +34,22 @@ class RandomNamePicker {
         // Slots
         this.slotReel = document.getElementById('slotReel');
 
+        // Claw Machine
+        this.clawCanvas = document.getElementById('clawCanvas');
+        this.clawCtx = this.clawCanvas.getContext('2d');
+
+        // Race
+        this.raceCanvas = document.getElementById('raceCanvas');
+        this.raceCtx = this.raceCanvas.getContext('2d');
+
+        // Battle Royale
+        this.battleCanvas = document.getElementById('battleCanvas');
+        this.battleCtx = this.battleCanvas.getContext('2d');
+
+        // Spotlight
+        this.spotlightCanvas = document.getElementById('spotlightCanvas');
+        this.spotlightCtx = this.spotlightCanvas.getContext('2d');
+
         // Main elements
         this.pickBtn = document.getElementById('pickBtn');
         
@@ -232,6 +248,18 @@ class RandomNamePicker {
                 winner = this.names[winnerIndex];
                 await this.spinSlots(winner);
                 break;
+            case 'claw':
+                winner = await this.runClawMachine();
+                break;
+            case 'race':
+                winner = await this.runRace();
+                break;
+            case 'battle':
+                winner = await this.runBattleRoyale();
+                break;
+            case 'spotlight':
+                winner = await this.runSpotlight();
+                break;
         }
 
         // Show winner in modal
@@ -340,8 +368,7 @@ class RandomNamePicker {
             ctx.shadowBlur = 5;
             ctx.shadowOffsetX = 1;
             ctx.shadowOffsetY = 1;
-            const displayName = name.length > 14 ? name.substring(0, 12) + '...' : name;
-            ctx.fillText(displayName, radius - 25, 0);
+            ctx.fillText(name, radius - 25, 0);
             ctx.restore();
         });
 
@@ -447,6 +474,926 @@ class RandomNamePicker {
                     this.slotReel.style.transform = `translateY(-${targetPosition}px)`;
                     resolve();
                 }
+            };
+            
+            animate();
+        });
+    }
+
+    // Claw Machine Animation
+    runClawMachine() {
+        return new Promise(resolve => {
+            const canvas = this.clawCanvas;
+            const ctx = this.clawCtx;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Animal emojis and colors
+            const animalEmojis = ['🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐰', '🦊', '🐶', '🐱', '🐮', '🐔', '🐧', '🐺', '🐹', '🦉', '🐦', '🐤', '🐙', '🐝', '🐢'];
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+            
+            // Create animals with names - spread across the full pit width
+            const pitWidth = width - 160; // Leave space for chute on right
+            const cols = Math.min(8, Math.ceil(Math.sqrt(this.names.length * 2)));
+            const spacing = pitWidth / cols;
+            
+            const animals = this.names.map((name, i) => ({
+                name,
+                x: 40 + (i % cols) * spacing + Math.random() * 20,
+                y: height - 110 + Math.floor(i / cols) * 35 + Math.random() * 20,
+                radius: 25,
+                emoji: animalEmojis[i % animalEmojis.length],
+                color: colors[i % colors.length],
+                vx: 0,
+                vy: 0
+            }));
+            
+            // Claw state
+            const claw = {
+                x: width / 2,
+                y: 50,
+                openAngle: 0.4,
+                state: 'moving', // moving, descending, grabbing, ascending, dropping
+                targetX: 0,
+                grabbedAnimal: null
+            };
+            
+            // Pick winner (may change if fumble happens)
+            let winnerIndex = Math.floor(Math.random() * this.names.length);
+            let winner = this.names[winnerIndex];
+            let targetAnimal = animals[winnerIndex];
+            claw.targetX = targetAnimal.x;
+            
+            let fumbleCount = Math.random() < 0.4 ? 1 : 0; // 40% chance to fumble
+            let phase = 0;
+            const startTime = Date.now();
+            
+            const drawClaw = (x, y, open, holding) => {
+                ctx.save();
+                ctx.translate(x, y);
+                
+                // Claw arm
+                ctx.fillStyle = '#888';
+                ctx.fillRect(-8, -50, 16, 50);
+                
+                // Claw mechanism
+                ctx.fillStyle = '#666';
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Claw prongs
+                const angle = open ? 0.5 : 0.15;
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                
+                // Left prong
+                ctx.save();
+                ctx.rotate(-angle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 35);
+                ctx.lineTo(-10, 45);
+                ctx.stroke();
+                ctx.restore();
+                
+                // Right prong
+                ctx.save();
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 35);
+                ctx.lineTo(10, 45);
+                ctx.stroke();
+                ctx.restore();
+                
+                ctx.restore();
+            };
+            
+            const drawAnimal = (animal, highlight = false) => {
+                ctx.save();
+                ctx.translate(animal.x, animal.y);
+                
+                // Circular background
+                ctx.beginPath();
+                ctx.arc(0, 0, animal.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = highlight ? '#fff' : animal.color;
+                ctx.lineWidth = highlight ? 4 : 3;
+                ctx.stroke();
+                
+                // Emoji
+                ctx.font = '28px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(animal.emoji, 0, 2);
+                
+                // Name tag below
+                ctx.fillStyle = animal.color;
+                ctx.fillRect(-25, animal.radius + 2, 50, 14);
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 8px Poppins';
+                ctx.fillText(animal.name, 0, animal.radius + 10);
+                
+                ctx.restore();
+            };
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw arcade machine frame
+                ctx.fillStyle = '#2d1f3d';
+                ctx.fillRect(0, 0, width, 80); // Top
+                ctx.fillStyle = '#3d2f4d';
+                ctx.fillRect(0, height - 150, width, 150); // Bottom pit
+                
+                // Glass reflection
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fillRect(10, 85, width - 20, height - 240);
+                
+                // Chute (draw early so it's behind the animals)
+                ctx.fillStyle = '#1a1a2e';
+                ctx.beginPath();
+                ctx.moveTo(width - 120, 80);
+                ctx.lineTo(width - 40, 80);
+                ctx.lineTo(width - 60, height - 30);
+                ctx.lineTo(width - 100, height - 30);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw animals in pit
+                animals.forEach((animal, i) => {
+                    if (animal !== claw.grabbedAnimal) {
+                        drawAnimal(animal);
+                    }
+                });
+                
+                // Claw movement logic
+                switch (claw.state) {
+                    case 'moving':
+                        const moveSpeed = 3;
+                        if (Math.abs(claw.x - claw.targetX) > moveSpeed) {
+                            claw.x += claw.targetX > claw.x ? moveSpeed : -moveSpeed;
+                        } else {
+                            claw.x = claw.targetX;
+                            claw.state = 'descending';
+                        }
+                        break;
+                        
+                    case 'descending':
+                        claw.y += 4;
+                        if (claw.y >= targetAnimal.y - 30) {
+                            claw.state = 'grabbing';
+                            claw.openAngle = 0.5;
+                            setTimeout(() => {
+                                claw.openAngle = 0.15;
+                                if (fumbleCount > 0) {
+                                    fumbleCount--;
+                                    setTimeout(() => {
+                                        claw.openAngle = 0.5;
+                                        claw.state = 'ascending';
+                                    }, 300);
+                                } else {
+                                    claw.grabbedAnimal = targetAnimal;
+                                    claw.state = 'ascending';
+                                }
+                            }, 400);
+                        }
+                        break;
+                        
+                    case 'ascending':
+                        claw.y -= 6;
+                        if (claw.grabbedAnimal) {
+                            claw.grabbedAnimal.x = claw.x;
+                            claw.grabbedAnimal.y = claw.y + 50;
+                        }
+                        if (claw.y <= 50) {
+                            if (claw.grabbedAnimal) {
+                                claw.state = 'moveToChute';
+                            } else {
+                                // Fumbled - pick a new random target!
+                                winnerIndex = Math.floor(Math.random() * this.names.length);
+                                winner = this.names[winnerIndex];
+                                targetAnimal = animals[winnerIndex];
+                                claw.targetX = targetAnimal.x;
+                                claw.state = 'moving';
+                            }
+                        }
+                        break;
+                        
+                    case 'moveToChute':
+                        const chuteX = width - 80;
+                        if (claw.x < chuteX) {
+                            claw.x += 4;
+                            claw.grabbedAnimal.x = claw.x;
+                        } else {
+                            claw.state = 'dropping';
+                            claw.openAngle = 0.5;
+                            claw.grabbedAnimal.vy = 2;
+                        }
+                        break;
+                        
+                    case 'dropping':
+                        if (claw.grabbedAnimal) {
+                            claw.grabbedAnimal.vy += 0.5;
+                            claw.grabbedAnimal.y += claw.grabbedAnimal.vy;
+                            
+                            if (claw.grabbedAnimal.y > height - 50) {
+                                claw.state = 'done';
+                            }
+                        }
+                        break;
+                }
+                
+                // Draw grabbed animal
+                if (claw.grabbedAnimal) {
+                    drawAnimal(claw.grabbedAnimal, true);
+                }
+                
+                // Draw claw
+                drawClaw(claw.x, claw.y, claw.openAngle > 0.3, claw.grabbedAnimal !== null);
+                
+                // Draw claw rail
+                ctx.fillStyle = '#444';
+                ctx.fillRect(20, 40, width - 40, 8);
+                
+                if (claw.state !== 'done') {
+                    requestAnimationFrame(animate);
+                } else {
+                    setTimeout(() => resolve(winner), 800);
+                }
+            };
+            
+            animate();
+        });
+    }
+
+    // Race Animation
+    runRace() {
+        return new Promise(resolve => {
+            const canvas = this.raceCanvas;
+            const ctx = this.raceCtx;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Racing emojis
+            const racerEmojis = ['🐎', '🚗', '🐢', '🚀', '🏃', '🐇', '🦊', '🐕', '🚲', '🛵'];
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+            
+            // Create racers
+            const laneHeight = Math.min(60, (height - 100) / this.names.length);
+            const startX = 80;
+            const finishX = width - 100;
+            const raceDistance = finishX - startX;
+            
+            // Pre-determine loser (race always picks the loser)
+            const pickedIndex = Math.floor(Math.random() * this.names.length);
+            const isLoserMode = true; // Race always picks the loser
+            const picked = this.names[pickedIndex];
+            
+            // Create racers with individual race profiles
+            const racers = this.names.map((name, i) => {
+                // Each racer gets a base speed - keep them VERY close together
+                const isPicked = i === pickedIndex;
+                // In loser mode, picked person is slightly slowest; otherwise slightly fastest
+                // Much tighter distribution now - only ~5% speed difference
+                let baseSpeed;
+                if (isLoserMode) {
+                    baseSpeed = isPicked ? 0.38 : 0.40 + Math.random() * 0.03;
+                } else {
+                    baseSpeed = isPicked ? 0.43 : 0.39 + Math.random() * 0.03;
+                }
+                
+                return {
+                    name,
+                    x: startX,
+                    y: 50 + i * laneHeight + laneHeight / 2,
+                    progress: 0, // 0 to 1
+                    baseSpeed,
+                    currentSpeed: 0,
+                    emoji: racerEmojis[i % racerEmojis.length],
+                    color: colors[i % colors.length],
+                    finished: false,
+                    finishOrder: 0,
+                    // Pre-generate speed variation curve for natural movement
+                    speedVariations: Array.from({length: 30}, () => 0.95 + Math.random() * 0.1)
+                };
+            });
+            
+            let raceStarted = false;
+            let countdown = 3;
+            let raceFinished = false;
+            let finishCounter = 0;
+            const startTime = Date.now();
+            const raceDuration = 20000; // 20 seconds - longer race
+            
+            const drawTrack = () => {
+                // Sky
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, width, height * 0.6);
+                
+                // Grass
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(0, height * 0.6, width, height * 0.4);
+                
+                // Track
+                ctx.fillStyle = '#d4a574';
+                ctx.fillRect(0, 30, width, height - 60);
+                
+                // Lanes
+                racers.forEach((_, i) => {
+                    const y = 50 + i * laneHeight;
+                    ctx.strokeStyle = '#fff';
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                });
+                
+                // Start line
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(startX - 5, 30, 10, height - 60);
+                
+                // Finish line (checkered)
+                for (let i = 0; i < Math.ceil((height - 60) / 15); i++) {
+                    for (let j = 0; j < 3; j++) {
+                        ctx.fillStyle = (i + j) % 2 === 0 ? '#000' : '#fff';
+                        ctx.fillRect(finishX + j * 15, 30 + i * 15, 15, 15);
+                    }
+                }
+            };
+            
+            const drawRacer = (racer) => {
+                ctx.save();
+                ctx.translate(racer.x, racer.y);
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 15, 20, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Circular background for emoji (makes it more solid/visible)
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = racer.color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Emoji - some need flipping, some don't
+                // Emojis that already face right or are symmetrical: 🚀
+                const noFlipEmojis = ['🚀'];
+                const shouldFlip = !noFlipEmojis.includes(racer.emoji);
+                
+                ctx.save();
+                if (shouldFlip) {
+                    ctx.scale(-1, 1); // Flip horizontally
+                }
+                ctx.font = '28px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(racer.emoji, 0, 0);
+                ctx.restore();
+                
+                // Name tag
+                ctx.fillStyle = racer.color;
+                ctx.fillRect(-30, -35, 60, 18);
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 10px Poppins';
+                ctx.fillText(racer.name, 0, -26);
+                
+                ctx.restore();
+            };
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                
+                ctx.clearRect(0, 0, width, height);
+                drawTrack();
+                
+                // Countdown
+                if (elapsed < 3000) {
+                    countdown = 3 - Math.floor(elapsed / 1000);
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 100px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(countdown > 0 ? countdown : 'GO!', width / 2, height / 2);
+                    
+                    racers.forEach(drawRacer);
+                    requestAnimationFrame(animate);
+                    return;
+                }
+                
+                if (!raceStarted) {
+                    raceStarted = true;
+                }
+                
+                // Calculate race time progress (0 to 1)
+                const raceTime = elapsed - 3000;
+                const timeProgress = Math.min(1, raceTime / raceDuration);
+                
+                // Update racer positions
+                racers.forEach((racer, i) => {
+                    if (racer.finished) return;
+                    
+                    // Get speed variation based on current progress
+                    const variationIndex = Math.floor(racer.progress * 29);
+                    const speedVariation = racer.speedVariations[variationIndex];
+                    
+                    // Calculate target speed with smooth acceleration
+                    let targetSpeed = racer.baseSpeed * speedVariation;
+                    
+                    // Add exciting moments - random surges for non-picked racers
+                    if (i !== pickedIndex && Math.random() < 0.02 && timeProgress > 0.3 && timeProgress < 0.85) {
+                        targetSpeed *= 1.15; // Occasional surge to create drama
+                    }
+                    
+                    // Picked person gets slight disadvantage only in final stretch
+                    if (i === pickedIndex && timeProgress > 0.85) {
+                        targetSpeed *= isLoserMode ? 0.92 : 1.08;
+                    }
+                    
+                    // Keep everyone bunched together until final stretch
+                    const avgProgress = racers.reduce((sum, r) => sum + r.progress, 0) / racers.length;
+                    if (timeProgress < 0.75) {
+                        // Rubber-banding: slow down leaders, speed up stragglers
+                        if (racer.progress > avgProgress + 0.03) {
+                            targetSpeed *= 0.95;
+                        } else if (racer.progress < avgProgress - 0.03) {
+                            targetSpeed *= 1.05;
+                        }
+                    }
+                    
+                    // Smooth speed changes (no sudden jumps)
+                    racer.currentSpeed += (targetSpeed - racer.currentSpeed) * 0.08;
+                    
+                    // Update progress
+                    racer.progress += racer.currentSpeed * 0.014; // slightly slower tick
+                    racer.progress = Math.min(1, racer.progress);
+                    
+                    // Update position (smooth, no wobble)
+                    racer.x = startX + raceDistance * racer.progress;
+                    
+                    // Check finish
+                    if (racer.progress >= 1 && !racer.finished) {
+                        racer.finished = true;
+                        finishCounter++;
+                        racer.finishOrder = finishCounter;
+                        if (!isLoserMode && i === pickedIndex) {
+                            raceFinished = true;
+                        }
+                    }
+                });
+                
+                // In loser mode, check if picked person is last
+                if (isLoserMode && !raceFinished) {
+                    const finishedCount = racers.filter(r => r.finished).length;
+                    const pickedRacer = racers[pickedIndex];
+                    // If everyone except picked has finished, or picked is clearly last
+                    if (finishedCount === racers.length - 1 && !pickedRacer.finished) {
+                        raceFinished = true;
+                    }
+                }
+                
+                // Nail-biter finish: only separate them in the final 15% of the race
+                if (!raceFinished && timeProgress > 0.85) {
+                    const pickedRacer = racers[pickedIndex];
+                    racers.forEach((racer, i) => {
+                        if (i !== pickedIndex && !racer.finished) {
+                            if (isLoserMode) {
+                                // In loser mode, others should pull ahead slightly at the very end
+                                if (racer.progress < pickedRacer.progress + 0.01 && pickedRacer.progress > 0.85) {
+                                    racer.progress += 0.002; // Gentle nudge forward
+                                }
+                            } else {
+                                // In winner mode, others should fall slightly behind at the very end
+                                if (racer.progress > pickedRacer.progress - 0.01 && pickedRacer.progress > 0.85) {
+                                    racer.progress -= 0.002; // Gentle slowdown
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Draw racers
+                racers.forEach(drawRacer);
+                
+                // Check if race is done
+                if (raceFinished) {
+                    // Result banner
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(width / 2 - 150, height / 2 - 50, 300, 100);
+                    ctx.strokeStyle = isLoserMode ? '#ff6b6b' : '#ffd700';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(width / 2 - 150, height / 2 - 50, 300, 100);
+                    
+                    ctx.fillStyle = isLoserMode ? '#ff6b6b' : '#ffd700';
+                    ctx.font = 'bold 20px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(isLoserMode ? '🐢 PICKED! 🐢' : '🏆 WINNER! 🏆', width / 2, height / 2 - 20);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 28px Poppins';
+                    ctx.fillText(picked, width / 2, height / 2 + 20);
+                    
+                    setTimeout(() => resolve(picked), 1500);
+                    return;
+                }
+                
+                requestAnimationFrame(animate);
+            };
+            
+            animate();
+        });
+    }
+
+    // Battle Royale Animation
+    runBattleRoyale() {
+        return new Promise(resolve => {
+            const canvas = this.battleCanvas;
+            const ctx = this.battleCtx;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Pick winner ahead of time
+            const winnerIndex = Math.floor(Math.random() * this.names.length);
+            const winner = this.names[winnerIndex];
+            
+            // Create contestants
+            const cols = Math.ceil(Math.sqrt(this.names.length));
+            const rows = Math.ceil(this.names.length / cols);
+            const cellWidth = (width - 40) / cols;
+            const cellHeight = (height - 100) / rows;
+            
+            const contestants = this.names.map((name, i) => ({
+                name,
+                x: 20 + (i % cols) * cellWidth + cellWidth / 2,
+                y: 50 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
+                alive: true,
+                opacity: 1,
+                scale: 1,
+                eliminated: false,
+                eliminationTime: 0,
+                isWinner: name === winner
+            }));
+            
+            // Create elimination order (winner is never eliminated)
+            const eliminationOrder = contestants
+                .filter(c => !c.isWinner)
+                .sort(() => Math.random() - 0.5);
+            
+            let eliminationIndex = 0;
+            let lastEliminationTime = 0;
+            let baseInterval = 800; // Start slower
+            const startTime = Date.now();
+            
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Dark background
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Title
+                ctx.fillStyle = '#ff6b6b';
+                ctx.font = 'bold 24px Poppins';
+                ctx.textAlign = 'center';
+                const aliveCount = contestants.filter(c => c.alive).length;
+                ctx.fillText(`⚔️ BATTLE ROYALE - ${aliveCount} Remaining ⚔️`, width / 2, 30);
+                
+                // Eliminate contestants with accelerating speed
+                if (eliminationIndex < eliminationOrder.length) {
+                    // Speed up as we go
+                    const progress = eliminationIndex / eliminationOrder.length;
+                    const interval = Math.max(100, baseInterval * (1 - progress * 0.9));
+                    
+                    if (elapsed - lastEliminationTime > interval) {
+                        eliminationOrder[eliminationIndex].alive = false;
+                        eliminationOrder[eliminationIndex].eliminated = true;
+                        eliminationOrder[eliminationIndex].eliminationTime = elapsed;
+                        eliminationIndex++;
+                        lastEliminationTime = elapsed;
+                    }
+                }
+                
+                // Draw contestants
+                contestants.forEach((c, i) => {
+                    if (c.eliminated) {
+                        // Fade out and shrink animation
+                        const timeSinceElim = elapsed - c.eliminationTime;
+                        c.opacity = Math.max(0, 1 - timeSinceElim / 500);
+                        c.scale = Math.max(0, 1 - timeSinceElim / 500);
+                    }
+                    
+                    if (c.opacity <= 0) return;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = c.opacity;
+                    ctx.translate(c.x, c.y);
+                    ctx.scale(c.scale, c.scale);
+                    
+                    // Background box
+                    const boxWidth = cellWidth - 10;
+                    const boxHeight = cellHeight - 10;
+                    ctx.fillStyle = c.alive ? colors[i % colors.length] : '#333';
+                    ctx.strokeStyle = c.alive ? '#fff' : '#666';
+                    ctx.lineWidth = c.isWinner && aliveCount === 1 ? 4 : 2;
+                    
+                    // Rounded rectangle
+                    const radius = 8;
+                    ctx.beginPath();
+                    ctx.roundRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, radius);
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Name
+                    ctx.fillStyle = c.alive ? '#000' : '#666';
+                    ctx.font = `bold ${Math.min(16, cellWidth / 6)}px Poppins`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(c.name, 0, 0);
+                    
+                    // Strike through if eliminated
+                    if (!c.alive && c.opacity > 0) {
+                        ctx.strokeStyle = '#ff0000';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(-boxWidth/2 + 5, 0);
+                        ctx.lineTo(boxWidth/2 - 5, 0);
+                        ctx.stroke();
+                    }
+                    
+                    ctx.restore();
+                });
+                
+                // Check if done
+                if (aliveCount === 1 && eliminationIndex >= eliminationOrder.length) {
+                    // Draw winner celebration
+                    const winnerContestant = contestants.find(c => c.isWinner);
+                    
+                    ctx.save();
+                    ctx.shadowColor = '#ffd700';
+                    ctx.shadowBlur = 30;
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = 'bold 28px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('👑 SURVIVOR! 👑', width / 2, height - 40);
+                    ctx.restore();
+                    
+                    setTimeout(() => resolve(winner), 1500);
+                    return;
+                }
+                
+                requestAnimationFrame(animate);
+            };
+            
+            animate();
+        });
+    }
+
+    // Spotlight Animation
+    runSpotlight() {
+        return new Promise(resolve => {
+            const canvas = this.spotlightCanvas;
+            const ctx = this.spotlightCtx;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Pick winner
+            const winnerIndex = Math.floor(Math.random() * this.names.length);
+            const winner = this.names[winnerIndex];
+            
+            // Create name positions in a grid
+            const cols = Math.ceil(Math.sqrt(this.names.length));
+            const rows = Math.ceil(this.names.length / cols);
+            const cellWidth = (width - 60) / cols;
+            const cellHeight = (height - 80) / rows;
+            
+            const namePositions = this.names.map((name, i) => ({
+                name,
+                x: 30 + (i % cols) * cellWidth + cellWidth / 2,
+                y: 60 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
+                isWinner: name === winner
+            }));
+            
+            // Spotlight state
+            let spotlightX = width / 2;
+            let spotlightY = height / 2;
+            let targetX = width / 2;
+            let targetY = height / 2;
+            let spotlightRadius = 80;
+            
+            const duration = 8000; // 8 seconds total
+            const startTime = Date.now();
+            let phase = 'searching'; // searching, narrowing, locked
+            let narrowingStart = 0;
+            let lockedTime = 0;
+            
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = elapsed / duration;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw all names (dimmed)
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, width, height);
+                
+                namePositions.forEach((pos, i) => {
+                    ctx.fillStyle = colors[i % colors.length] + '33'; // Very dimmed
+                    ctx.font = 'bold 16px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(pos.name, pos.x, pos.y);
+                });
+                
+                // Update spotlight position based on phase
+                if (phase === 'searching') {
+                    // Erratic movement - pick random targets
+                    if (Math.random() < 0.05 || (targetX === spotlightX && targetY === spotlightY)) {
+                        const randomPos = namePositions[Math.floor(Math.random() * namePositions.length)];
+                        targetX = randomPos.x;
+                        targetY = randomPos.y;
+                    }
+                    
+                    // Move towards target with some wobble
+                    const speed = 0.08;
+                    spotlightX += (targetX - spotlightX) * speed + (Math.random() - 0.5) * 10;
+                    spotlightY += (targetY - spotlightY) * speed + (Math.random() - 0.5) * 10;
+                    
+                    // Keep in bounds
+                    spotlightX = Math.max(50, Math.min(width - 50, spotlightX));
+                    spotlightY = Math.max(50, Math.min(height - 50, spotlightY));
+                    
+                    // Transition to narrowing phase
+                    if (progress > 0.7) {
+                        phase = 'narrowing';
+                        narrowingStart = Date.now();
+                        // Find winner position
+                        const winnerPos = namePositions.find(p => p.isWinner);
+                        targetX = winnerPos.x;
+                        targetY = winnerPos.y;
+                    }
+                } else if (phase === 'narrowing') {
+                    // Slow down and sweep between two names before locking
+                    const narrowElapsed = Date.now() - narrowingStart;
+                    const winnerPos = namePositions.find(p => p.isWinner);
+                    
+                    // Oscillate near winner
+                    const oscillation = Math.sin(narrowElapsed / 200) * 100 * Math.max(0, 1 - narrowElapsed / 2000);
+                    targetX = winnerPos.x + oscillation;
+                    targetY = winnerPos.y;
+                    
+                    spotlightX += (targetX - spotlightX) * 0.1;
+                    spotlightY += (targetY - spotlightY) * 0.1;
+                    
+                    // Shrink spotlight
+                    spotlightRadius = Math.max(50, 80 - narrowElapsed / 50);
+                    
+                    if (narrowElapsed > 2000) {
+                        phase = 'locked';
+                        lockedTime = Date.now();
+                        targetX = winnerPos.x;
+                        targetY = winnerPos.y;
+                    }
+                } else if (phase === 'locked') {
+                    // Lock onto winner
+                    const winnerPos = namePositions.find(p => p.isWinner);
+                    spotlightX += (winnerPos.x - spotlightX) * 0.3;
+                    spotlightY += (winnerPos.y - spotlightY) * 0.3;
+                    spotlightRadius = 60;
+                }
+                
+                // Create spotlight effect using clipping
+                ctx.save();
+                
+                // Draw spotlight gradient
+                const gradient = ctx.createRadialGradient(
+                    spotlightX, spotlightY, 0,
+                    spotlightX, spotlightY, spotlightRadius * 1.5
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.9)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 200, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(spotlightX, spotlightY, spotlightRadius * 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Draw illuminated names
+                namePositions.forEach((pos, i) => {
+                    const dist = Math.sqrt(Math.pow(pos.x - spotlightX, 2) + Math.pow(pos.y - spotlightY, 2));
+                    if (dist < spotlightRadius * 1.2) {
+                        const brightness = 1 - dist / (spotlightRadius * 1.2);
+                        ctx.fillStyle = colors[i % colors.length];
+                        ctx.globalAlpha = brightness;
+                        ctx.font = 'bold 18px Poppins';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(pos.name, pos.x, pos.y);
+                        ctx.globalAlpha = 1;
+                    }
+                });
+                
+                ctx.restore();
+                
+                // Draw spotlight beam from top
+                ctx.save();
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.moveTo(width / 2 - 20, 0);
+                ctx.lineTo(width / 2 + 20, 0);
+                ctx.lineTo(spotlightX + spotlightRadius / 2, spotlightY - spotlightRadius);
+                ctx.lineTo(spotlightX - spotlightRadius / 2, spotlightY - spotlightRadius);
+                ctx.closePath();
+                const beamGradient = ctx.createLinearGradient(width / 2, 0, spotlightX, spotlightY);
+                beamGradient.addColorStop(0, 'rgba(255, 255, 200, 0.5)');
+                beamGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                ctx.fillStyle = beamGradient;
+                ctx.fill();
+                ctx.restore();
+                
+                // Check if done
+                if (phase === 'locked' && Date.now() - lockedTime > 1500) {
+                    // Final reveal
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    // Winner spotlight
+                    const winnerPos = namePositions.find(p => p.isWinner);
+                    const finalGradient = ctx.createRadialGradient(
+                        winnerPos.x, winnerPos.y, 0,
+                        winnerPos.x, winnerPos.y, 100
+                    );
+                    finalGradient.addColorStop(0, 'rgba(255, 215, 0, 0.8)');
+                    finalGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+                    ctx.beginPath();
+                    ctx.arc(winnerPos.x, winnerPos.y, 100, 0, Math.PI * 2);
+                    ctx.fillStyle = finalGradient;
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ffd700';
+                    ctx.font = 'bold 24px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🔔 ' + winner + ' 🔔', winnerPos.x, winnerPos.y);
+                    
+                    setTimeout(() => resolve(winner), 1000);
+                    return;
+                }
+                
+                requestAnimationFrame(animate);
             };
             
             animate();

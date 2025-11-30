@@ -4,9 +4,11 @@ A fun, interactive random name picker with multiple animation styles. Hosted ent
 
 ## Features
 
-- **2 Animation Styles:**
-  - **Spin Wheel** - Classic spinning wheel of fortune with colorful segments
-  - **Slot Machine** - Vegas-style slot machine animation
+- **4 Animation Styles:**
+  - 🎡 **Spin Wheel** - Classic spinning wheel of fortune with colorful segments
+  - 🎰 **Slot Machine** - Vegas-style slot machine animation
+  - 🪝 **Claw Machine** - Arcade claw grabs capsules containing names, with occasional fumbles for comedic effect!
+  - 🏁 **Race** - Emoji racers (horses, cars, rockets, etc.) compete in an exciting race to the finish line
 
 - **Easy Name Management:**
   - Add names one at a time
@@ -30,7 +32,7 @@ A fun, interactive random name picker with multiple animation styles. Hosted ent
 1. Clone or download this repository
 2. Open `index.html` in your browser
 3. Add names in the sidebar
-4. Choose your animation style (Wheel or Slots)
+4. Choose your animation style
 5. Click "Pick Name!"
 
 ## Deploy to GitHub Pages
