@@ -5,6 +5,7 @@ class RandomNamePicker {
         this.names = [];
         this.currentAnimation = 'wheel';
         this.isSpinning = false;
+        this.firstClawGame = true; // First claw game of the session always succeeds
         
         this.initElements();
         this.initEventListeners();
@@ -500,21 +501,50 @@ class RandomNamePicker {
             const animalEmojis = ['🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐰', '🦊', '🐶', '🐱', '🐮', '🐔', '🐧', '🐺', '🐹', '🦉', '🐦', '🐤', '🐙', '🐝', '🐢'];
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
             
-            // Create animals with names - spread across the full pit width
+            // Create animals with names - arrange in two neat rows
             const pitWidth = width - 160; // Leave space for chute on right
-            const cols = Math.min(8, Math.ceil(Math.sqrt(this.names.length * 2)));
-            const spacing = pitWidth / cols;
+            const animalSize = 55; // Width each animal takes up
+            const maxPerRow = Math.floor(pitWidth / animalSize);
             
-            const animals = this.names.map((name, i) => ({
-                name,
-                x: 40 + (i % cols) * spacing + Math.random() * 20,
-                y: height - 110 + Math.floor(i / cols) * 35 + Math.random() * 20,
-                radius: 25,
-                emoji: animalEmojis[i % animalEmojis.length],
-                color: colors[i % colors.length],
-                vx: 0,
-                vy: 0
-            }));
+            // Split into two rows if needed
+            const totalAnimals = this.names.length;
+            let row1Count, row2Count;
+            if (totalAnimals <= maxPerRow) {
+                // Single row
+                row1Count = totalAnimals;
+                row2Count = 0;
+            } else {
+                // Two rows - split evenly
+                row1Count = Math.ceil(totalAnimals / 2);
+                row2Count = totalAnimals - row1Count;
+            }
+            
+            const animals = this.names.map((name, i) => {
+                let x, y;
+                if (i < row1Count) {
+                    // First row (front/bottom)
+                    const rowSpacing = pitWidth / row1Count;
+                    x = 40 + i * rowSpacing + rowSpacing / 2;
+                    y = height - 70;
+                } else {
+                    // Second row (back/top)
+                    const rowIndex = i - row1Count;
+                    const rowSpacing = pitWidth / row2Count;
+                    x = 40 + rowIndex * rowSpacing + rowSpacing / 2;
+                    y = height - 125;
+                }
+                
+                return {
+                    name,
+                    x,
+                    y,
+                    radius: 25,
+                    emoji: animalEmojis[i % animalEmojis.length],
+                    color: colors[i % colors.length],
+                    vx: 0,
+                    vy: 0
+                };
+            });
             
             // Claw state
             const claw = {
@@ -532,7 +562,20 @@ class RandomNamePicker {
             let targetAnimal = animals[winnerIndex];
             claw.targetX = targetAnimal.x;
             
-            let fumbleCount = Math.random() < 0.4 ? 1 : 0; // 40% chance to fumble
+            // Fumble chances: 17% double fumble, 16% single fumble, 67% no fumble
+            // But first claw game of the session always succeeds!
+            let fumbleCount = 0;
+            if (this.firstClawGame) {
+                this.firstClawGame = false; // Mark that we've played once
+                fumbleCount = 0; // No fumble on first game
+            } else {
+                const fumbleRoll = Math.random();
+                if (fumbleRoll < 0.16) {
+                    fumbleCount = 2; // 16% chance for double fumble
+                } else if (fumbleRoll < 0.33) {
+                    fumbleCount = 1; // 16% chance for single fumble
+                }
+            }
             let phase = 0;
             const startTime = Date.now();
             
