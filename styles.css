@@ -1,0 +1,544 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #64748b;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --background: #0f172a;
+    --surface: #1e293b;
+    --surface-light: #334155;
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: #475569;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--background);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 280px;
+    background: var(--surface);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+.sidebar .animation-selector {
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+    margin-bottom: 5px;
+}
+
+.sidebar .animation-options {
+    display: flex;
+    gap: 8px;
+}
+
+.sidebar .animation-btn {
+    flex: 1;
+    padding: 10px 8px;
+    min-width: auto;
+}
+
+.name-input-container {
+    display: flex;
+    gap: 8px;
+}
+
+.name-input-container input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+    color: var(--text);
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.name-input-container input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.bulk-add {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bulk-add textarea {
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+    color: var(--text);
+    font-size: 0.85rem;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.bulk-add textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.names-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 5px;
+}
+
+.name-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: var(--surface-light);
+    border-radius: 8px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.name-item span {
+    font-size: 0.95rem;
+}
+
+.name-item .remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 5px;
+    transition: transform 0.2s;
+}
+
+.name-item .remove-btn:hover {
+    transform: scale(1.2);
+}
+
+.sidebar-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-add {
+    background: var(--primary);
+    color: white;
+    font-size: 1.2rem;
+    padding: 10px 15px;
+}
+
+.btn-add:hover {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--surface-light);
+    color: var(--text);
+    flex: 1;
+}
+
+.btn-secondary:hover {
+    background: var(--border);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+    flex: 1;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.animation-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 15px 20px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+}
+
+.animation-btn:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.animation-btn.active {
+    border-color: var(--primary);
+    background: var(--primary);
+}
+
+.animation-icon {
+    font-size: 1.8rem;
+}
+
+.animation-btn span:last-child {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Animation Container */
+.animation-container {
+    width: 100%;
+    max-width: 800px;
+    height: calc(100vh - 200px);
+    max-height: 750px;
+    position: relative;
+}
+
+.animation-display {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.animation-display.active {
+    display: flex;
+}
+
+/* Wheel Animation */
+.wheel-wrapper {
+    position: relative;
+}
+
+.wheel-pointer {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    color: var(--danger);
+    z-index: 10;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+#wheelCanvas {
+    width: min(650px, calc(100vh - 250px));
+    height: min(650px, calc(100vh - 250px));
+    border-radius: 50%;
+    box-shadow: 0 0 50px rgba(99, 102, 241, 0.4);
+}
+
+/* Slot Machine */
+.slot-machine {
+    background: linear-gradient(145deg, #2d3748, #1a202c);
+    padding: 50px 60px;
+    border-radius: 25px;
+    border: 5px solid #fbbf24;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+}
+
+.slot-window {
+    width: 350px;
+    height: 140px;
+    background: var(--background);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 4px solid var(--border);
+}
+
+.slot-window::before,
+.slot-window::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 30px;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.slot-window::before {
+    top: 0;
+    background: linear-gradient(to bottom, var(--background), transparent);
+}
+
+.slot-window::after {
+    bottom: 0;
+    background: linear-gradient(to top, var(--background), transparent);
+}
+
+.slot-reel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.1s linear;
+}
+
+.slot-reel .slot-name {
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text);
+    width: 100%;
+}
+
+/* Winner Modal */
+.winner-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 500;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.winner-modal.show {
+    display: flex;
+}
+
+.winner-modal-content {
+    background: var(--surface);
+    padding: 40px 60px;
+    border-radius: 20px;
+    text-align: center;
+    border: 3px solid var(--primary);
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.5);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.winner-modal-header {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.winner-modal-name {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--success);
+    margin-bottom: 30px;
+    text-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+.winner-modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn-remove-winner {
+    background: var(--danger);
+    color: white;
+    padding: 12px 25px;
+    font-size: 1rem;
+}
+
+.btn-remove-winner:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+.btn-close-modal {
+    background: var(--surface-light);
+    color: var(--text);
+    padding: 12px 25px;
+    font-size: 1rem;
+}
+
+.btn-close-modal:hover {
+    background: var(--border);
+}
+
+/* Pick Button */
+.btn-pick {
+    background: linear-gradient(135deg, var(--primary), #a855f7);
+    color: white;
+    font-size: 1.3rem;
+    padding: 18px 50px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    transition: all 0.3s;
+}
+
+.btn-pick:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 30px rgba(99, 102, 241, 0.5);
+}
+
+.btn-pick:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-pick.spinning {
+    animation: pulse 0.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.no-history {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Confetti Canvas */
+#confettiCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .names-list {
+        max-height: 150px;
+    }
+    
+    .main-content h1 {
+        font-size: 1.8rem;
+    }
+    
+    .animation-container {
+        height: 350px;
+    }
+    
+    #wheelCanvas {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .roulette-container {
+        width: 280px;
+        height: 280px;
+    }
+}
+
+@media (max-width: 600px) {
+    .animation-options {
+        gap: 5px;
+    }
+    
+    .animation-btn {
+        padding: 10px 12px;
+        min-width: 70px;
+    }
+    
+    .animation-icon {
+        font-size: 1.4rem;
+    }
+    
+    .animation-btn span:last-child {
+        font-size: 0.7rem;
+    }
+    
+    .btn-pick {
+        padding: 15px 35px;
+        font-size: 1.1rem;
+    }
+}

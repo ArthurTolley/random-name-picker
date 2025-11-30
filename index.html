@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Name Picker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar for names -->
+        <aside class="sidebar">
+            <!-- Animation type selector -->
+            <div class="animation-selector">
+                <div class="animation-options">
+                    <button class="animation-btn active" data-type="wheel">
+                        <span class="animation-icon">🎡</span>
+                        <span>Wheel</span>
+                    </button>
+                    <button class="animation-btn" data-type="slots">
+                        <span class="animation-icon">🎰</span>
+                        <span>Slots</span>
+                    </button>
+                </div>
+            </div>
+            <div class="name-input-container">
+                <input type="text" id="nameInput" placeholder="Enter a name..." autocomplete="off">
+                <button id="addNameBtn" class="btn btn-add">+</button>
+            </div>
+            <div class="bulk-add">
+                <textarea id="bulkInput" placeholder="Add multiple names (one per line)..."></textarea>
+                <button id="bulkAddBtn" class="btn btn-secondary">Add All</button>
+            </div>
+            <div class="names-list" id="namesList">
+                <!-- Names will be added here -->
+            </div>
+            <div class="sidebar-actions">
+                <button id="clearAllBtn" class="btn btn-danger">Clear All</button>
+                <button id="loadSampleBtn" class="btn btn-secondary">Load GW</button>
+            </div>
+        </aside>
+
+        <!-- Main content area -->
+        <main class="main-content">
+            <!-- Animation display area -->
+            <div class="animation-container" id="animationContainer">
+                <!-- Wheel Animation -->
+                <div class="animation-display wheel-display active" id="wheelDisplay">
+                    <div class="wheel-wrapper">
+                        <div class="wheel-pointer">▼</div>
+                        <canvas id="wheelCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Slot Machine Animation -->
+                <div class="animation-display slots-display" id="slotsDisplay">
+                    <div class="slot-machine">
+                        <div class="slot-window">
+                            <div class="slot-reel" id="slotReel">
+                                <!-- Names will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pick button -->
+            <button id="pickBtn" class="btn btn-pick">
+                <span class="btn-text">🎲 Pick Name!</span>
+            </button>
+        </main>
+    </div>
+
+    <!-- Winner Popup Modal -->
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-modal-content">
+            <div class="winner-modal-name" id="winnerName">-</div>
+            <div class="winner-modal-actions">
+                <button id="removeWinnerBtn" class="btn btn-remove-winner">Remove from List</button>
+                <button id="closeModalBtn" class="btn btn-close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confetti canvas -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <script src="app.js"></script>
+</body>
+</html>
