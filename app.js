@@ -157,7 +157,7 @@ class RandomNamePicker {
         const sampleNames = [
             'Anna', 'Arthur', 'Charlie', 'Elena', 'Emily', 'Gareth',
             'Ian', 'Isabela', 'Laura', 'Michael', 'Rahul', 'Sam I',
-            'Sergi', 'Tessa', 'Xan'
+            'Sergi', 'Tanmaya', 'Tessa', 'Xan'
         ];
         sampleNames.forEach(name => {
             if (!this.names.includes(name)) {
