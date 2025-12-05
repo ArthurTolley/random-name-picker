@@ -40,6 +40,26 @@
                     </button>
                 </div>
             </div>
+            <!-- Duration slider -->
+            <div class="duration-slider-container">
+                <label for="durationSlider" class="duration-label">
+                    <span>⏱Animation Speed</span>
+                    <span id="durationValue">1.0x</span>
+                </label>
+                <input type="range" id="durationSlider" class="duration-slider" min="0.25" max="3" step="0.25" value="1">
+                <div class="duration-hints">
+                    <span>Fast</span>
+                    <span>Slow</span>
+                </div>
+            </div>
+            <!-- Weights toggle -->
+            <div class="weights-toggle-container">
+                <label class="weights-toggle">
+                    <input type="checkbox" id="weightsToggle">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">Enable Weights</span>
+                </label>
+            </div>
             <div class="name-input-container">
                 <input type="text" id="nameInput" placeholder="Enter a name..." autocomplete="off">
                 <button id="addNameBtn" class="btn btn-add">+</button>
@@ -73,6 +93,7 @@
                 <div class="animation-display slots-display" id="slotsDisplay">
                     <div class="slot-machine">
                         <div class="slot-window">
+                            <div class="center-indicator"></div>
                             <div class="slot-reel" id="slotReel">
                                 <!-- Names will be populated here -->
                             </div>
@@ -102,9 +123,14 @@
             </div>
 
             <!-- Pick button -->
-            <button id="pickBtn" class="btn btn-pick">
-                <span class="btn-text">🎲 Pick Name!</span>
-            </button>
+            <div class="pick-controls">
+                <button id="pickBtn" class="btn btn-pick">
+                    <span class="btn-text">Pick Name!</span>
+                </button>
+                <button id="stopBtn" class="btn btn-stop" style="display: none;">
+                    <span class="btn-text">Reset</span>
+                </button>
+            </div>
         </main>
     </div>
 

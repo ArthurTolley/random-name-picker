@@ -1,9 +1,13 @@
 class RandomNamePicker {
     constructor() {
         this.names = [];
+        this.weights = []; // Weight for each name (1-4)
+        this.weightsEnabled = false;
         this.currentAnimation = 'wheel';
         this.isSpinning = false;
+        this.animationCancelled = false;
         this.firstClawGame = true; // First claw game of the session always succeeds
+        this.durationMultiplier = 1; // Animation speed multiplier (higher = slower)
         
         this.initElements();
         this.initEventListeners();
@@ -20,6 +24,7 @@ class RandomNamePicker {
         this.namesList = document.getElementById('namesList');
         this.clearAllBtn = document.getElementById('clearAllBtn');
         this.loadSampleBtn = document.getElementById('loadSampleBtn');
+        this.weightsToggle = document.getElementById('weightsToggle');
 
         // Animation elements
         this.animationBtns = document.querySelectorAll('.animation-btn');
@@ -51,6 +56,7 @@ class RandomNamePicker {
 
         // Main elements
         this.pickBtn = document.getElementById('pickBtn');
+        this.stopBtn = document.getElementById('stopBtn');
         
         // Modal elements
         this.winnerModal = document.getElementById('winnerModal');
@@ -63,6 +69,10 @@ class RandomNamePicker {
         this.confettiCanvas = document.getElementById('confettiCanvas');
         this.confettiCtx = this.confettiCanvas.getContext('2d');
         this.resizeConfetti();
+
+        // Duration slider
+        this.durationSlider = document.getElementById('durationSlider');
+        this.durationValue = document.getElementById('durationValue');
     }
 
     initEventListeners() {
@@ -87,6 +97,9 @@ class RandomNamePicker {
         // Pick button
         this.pickBtn.addEventListener('click', () => this.pickName());
 
+        // Stop button
+        this.stopBtn.addEventListener('click', () => this.stopAnimation());
+
         // Remove winner button
         this.removeWinnerBtn.addEventListener('click', () => this.removeLastWinner());
         
@@ -104,13 +117,57 @@ class RandomNamePicker {
             this.initWheelCanvas();
             this.drawWheel();
         });
+
+        // Duration slider
+        this.durationSlider.addEventListener('input', () => this.updateDuration());
+
+        // Weights toggle
+        this.weightsToggle.addEventListener('change', () => this.toggleWeights());
+    }
+
+    toggleWeights() {
+        this.weightsEnabled = this.weightsToggle.checked;
+        this.namesList.classList.toggle('weights-enabled', this.weightsEnabled);
+        this.saveToStorage();
+    }
+
+    updateWeight(index, weight) {
+        const parsedWeight = parseInt(weight) || 1;
+        this.weights[index] = Math.max(1, parsedWeight); // Ensure minimum of 1
+        this.saveToStorage();
+        this.updateAnimations(); // Refresh previews to show new weights
+    }
+
+    // Weighted random selection - returns index
+    getWeightedRandomIndex() {
+        if (!this.weightsEnabled) {
+            return Math.floor(Math.random() * this.names.length);
+        }
+        
+        // Build weighted array
+        const weightedIndices = [];
+        for (let i = 0; i < this.names.length; i++) {
+            const weight = this.weights[i] || 1;
+            for (let j = 0; j < weight; j++) {
+                weightedIndices.push(i);
+            }
+        }
+        
+        return weightedIndices[Math.floor(Math.random() * weightedIndices.length)];
+    }
+
+    updateDuration() {
+        this.durationMultiplier = parseFloat(this.durationSlider.value);
+        this.durationValue.textContent = `${this.durationMultiplier.toFixed(2)}x`;
     }
 
     // Name Management
     addName() {
+        if (this.isSpinning) return;
         const name = this.nameInput.value.trim();
         if (name && !this.names.includes(name)) {
             this.names.push(name);
+            this.weights.push(1); // Default weight of 1
             this.nameInput.value = '';
             this.updateNamesList();
             this.saveToStorage();
@@ -119,12 +176,14 @@ class RandomNamePicker {
     }
 
     bulkAddNames() {
+        if (this.isSpinning) return;
         const lines = this.bulkInput.value.split('\n');
         let added = 0;
         lines.forEach(line => {
             const name = line.trim();
             if (name && !this.names.includes(name)) {
                 this.names.push(name);
+                this.weights.push(1); // Default weight of 1
                 added++;
             }
         });
@@ -137,15 +196,19 @@ class RandomNamePicker {
     }
 
     removeName(index) {
+        if (this.isSpinning) return;
         this.names.splice(index, 1);
+        this.weights.splice(index, 1);
         this.updateNamesList();
         this.saveToStorage();
         this.updateAnimations();
     }
 
     clearAllNames() {
+        if (this.isSpinning) return;
         if (this.names.length === 0 || confirm('Clear all names?')) {
             this.names = [];
+            this.weights = [];
             this.updateNamesList();
             this.saveToStorage();
             this.updateAnimations();
@@ -153,6 +216,7 @@ class RandomNamePicker {
     }
 
     loadSampleNames() {
+        if (this.isSpinning) return;
         const sampleNames = [
             'Anna', 'Arthur', 'Charlie', 'Elena', 'Emily', 'Gareth',
             'Ian', 'Isabela', 'Laura', 'Michael', 'Rahul', 'Sam I',
@@ -161,6 +225,7 @@ class RandomNamePicker {
         sampleNames.forEach(name => {
             if (!this.names.includes(name)) {
                 this.names.push(name);
+                this.weights.push(1); // Default weight of 1
             }
         });
         this.updateNamesList();
@@ -173,11 +238,17 @@ class RandomNamePicker {
         this.names.forEach((name, index) => {
             const item = document.createElement('div');
             item.className = 'name-item';
+            const currentWeight = this.weights[index] || 1;
             item.innerHTML = `
-                <span>${name}</span>
+                <span class="name-text">${name}</span>
+                <div class="weight-selector">
+                    <span class="weight-label">×</span>
+                    <input type="number" min="1" value="${currentWeight}" data-index="${index}">
+                </div>
                 <button class="remove-btn" data-index="${index}">×</button>
             `;
             item.querySelector('.remove-btn').addEventListener('click', () => this.removeName(index));
+            item.querySelector('input').addEventListener('change', (e) => this.updateWeight(index, e.target.value));
             this.namesList.appendChild(item);
         });
     }
@@ -185,14 +256,33 @@ class RandomNamePicker {
     // Storage
     saveToStorage() {
         localStorage.setItem('randomNamePicker_names', JSON.stringify(this.names));
+        localStorage.setItem('randomNamePicker_weights', JSON.stringify(this.weights));
+        localStorage.setItem('randomNamePicker_weightsEnabled', JSON.stringify(this.weightsEnabled));
     }
 
     loadFromStorage() {
         const savedNames = localStorage.getItem('randomNamePicker_names');
         if (savedNames) {
             this.names = JSON.parse(savedNames);
-            this.updateNamesList();
         }
+        
+        const savedWeights = localStorage.getItem('randomNamePicker_weights');
+        if (savedWeights) {
+            this.weights = JSON.parse(savedWeights);
+        }
+        // Ensure weights array matches names array length
+        while (this.weights.length < this.names.length) {
+            this.weights.push(1);
+        }
+        
+        const savedWeightsEnabled = localStorage.getItem('randomNamePicker_weightsEnabled');
+        if (savedWeightsEnabled) {
+            this.weightsEnabled = JSON.parse(savedWeightsEnabled);
+            this.weightsToggle.checked = this.weightsEnabled;
+            this.namesList.classList.toggle('weights-enabled', this.weightsEnabled);
+        }
+        
+        this.updateNamesList();
     }
 
     // Animation Selection
@@ -236,8 +326,10 @@ class RandomNamePicker {
         if (this.isSpinning) return;
 
         this.isSpinning = true;
+        this.animationCancelled = false;
         this.pickBtn.disabled = true;
         this.pickBtn.classList.add('spinning');
+        this.stopBtn.style.display = 'inline-flex';
 
         let winner;
 
@@ -247,7 +339,7 @@ class RandomNamePicker {
                 winner = await this.spinWheel();
                 break;
             case 'slots':
-                const winnerIndex = Math.floor(Math.random() * this.names.length);
+                const winnerIndex = this.getWeightedRandomIndex();
                 winner = this.names[winnerIndex];
                 await this.spinSlots(winner);
                 break;
@@ -265,15 +357,27 @@ class RandomNamePicker {
                 break;
         }
 
-        // Show winner in modal
-        this.winnerName.textContent = winner;
-        this.lastWinner = winner;
-        this.showModal();
-        this.launchConfetti();
+        this.stopBtn.style.display = 'none';
+
+        // Only show winner if animation wasn't cancelled
+        if (!this.animationCancelled) {
+            this.winnerName.textContent = winner;
+            this.lastWinner = winner;
+            this.showModal();
+            this.launchConfetti();
+        } else {
+            // Reset animations to their initial state
+            this.updateAnimations();
+        }
 
         this.isSpinning = false;
+        this.animationCancelled = false;
         this.pickBtn.disabled = false;
         this.pickBtn.classList.remove('spinning');
+    }
+
+    stopAnimation() {
+        this.animationCancelled = true;
     }
 
     // Wheel Animation
@@ -297,6 +401,33 @@ class RandomNamePicker {
         
         // Store the logical size for drawing calculations
         this.wheelSize = size;
+    }
+
+    // Calculate total weight for wheel slice sizing
+    getTotalWeight() {
+        if (!this.weightsEnabled) return this.names.length;
+        return this.weights.reduce((sum, w, i) => i < this.names.length ? sum + (w || 1) : sum, 0);
+    }
+
+    // Get slice angles for each name based on weight
+    getSliceAngles() {
+        const totalWeight = this.getTotalWeight();
+        const angles = [];
+        let currentAngle = 0;
+        
+        this.names.forEach((name, i) => {
+            const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+            const sliceAngle = (weight / totalWeight) * 2 * Math.PI;
+            angles.push({
+                start: currentAngle,
+                end: currentAngle + sliceAngle,
+                name: name,
+                index: i
+            });
+            currentAngle += sliceAngle;
+        });
+        
+        return angles;
     }
 
     drawWheel(rotation = 0) {
@@ -332,7 +463,7 @@ class RandomNamePicker {
             return;
         }
 
-        const sliceAngle = (2 * Math.PI) / this.names.length;
+        const sliceAngles = this.getSliceAngles();
         const colors = [
             '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
             '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6',
@@ -344,9 +475,10 @@ class RandomNamePicker {
         ctx.rotate(rotation);
         ctx.translate(-centerX, -centerY);
 
-        this.names.forEach((name, i) => {
-            const startAngle = i * sliceAngle;
-            const endAngle = startAngle + sliceAngle;
+        sliceAngles.forEach((slice, i) => {
+            const startAngle = slice.start;
+            const endAngle = slice.end;
+            const sliceAngle = endAngle - startAngle;
 
             // Draw slice
             ctx.beginPath();
@@ -371,7 +503,7 @@ class RandomNamePicker {
             ctx.shadowBlur = 5;
             ctx.shadowOffsetX = 1;
             ctx.shadowOffsetY = 1;
-            ctx.fillText(name, radius - 25, 0);
+            ctx.fillText(slice.name, radius - 25, 0);
             ctx.restore();
         });
 
@@ -389,17 +521,23 @@ class RandomNamePicker {
 
     spinWheel() {
         return new Promise(resolve => {
-            const sliceAngle = (2 * Math.PI) / this.names.length;
+            const sliceAngles = this.getSliceAngles();
             
             // Spin to a random position (5-8 full rotations plus random extra)
             const spins = 5 + Math.random() * 3;
             const randomExtra = Math.random() * 2 * Math.PI;
             const totalRotation = spins * 2 * Math.PI + randomExtra;
             
-            const duration = 4000;
+            const duration = 4000 * this.durationMultiplier;
             const startTime = Date.now();
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve(null);
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
@@ -424,9 +562,14 @@ class RandomNamePicker {
                     // Normalize to 0 to 2*PI
                     if (pointerAngle < 0) pointerAngle += 2 * Math.PI;
                     
-                    // Find which slice this angle falls into
-                    const winnerIndex = Math.floor(pointerAngle / sliceAngle);
-                    const winner = this.names[winnerIndex];
+                    // Find which slice this angle falls into (works with weighted slices)
+                    let winner = this.names[0];
+                    for (const slice of sliceAngles) {
+                        if (pointerAngle >= slice.start && pointerAngle < slice.end) {
+                            winner = slice.name;
+                            break;
+                        }
+                    }
                     
                     resolve(winner);
                 }
@@ -439,48 +582,146 @@ class RandomNamePicker {
     // Slot Machine Animation
     setupSlots() {
         this.slotReel.innerHTML = '';
-        const displayNames = this.names.length > 0 ? this.names : ['Add names...'];
         
-        // Triple the names for smooth scrolling
-        [...displayNames, ...displayNames, ...displayNames].forEach(name => {
+        // Build weighted names list - each name appears based on their weight
+        let weightedNames = [];
+        if (this.names.length > 0) {
+            this.names.forEach((name, i) => {
+                const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+                for (let w = 0; w < weight; w++) {
+                    weightedNames.push(name);
+                }
+            });
+        } else {
+            weightedNames = ['Add names...'];
+        }
+        
+        // Shuffle weighted names for better visual distribution
+        weightedNames = weightedNames.sort(() => Math.random() - 0.5);
+        
+        // Repeat the weighted list for smooth wrapping during spin
+        const repeats = Math.ceil(50 / weightedNames.length); // Ensure enough items
+        const displayNames = [];
+        for (let r = 0; r < repeats; r++) {
+            displayNames.push(...weightedNames);
+        }
+        
+        displayNames.forEach(name => {
             const div = document.createElement('div');
             div.className = 'slot-name';
             div.textContent = name;
             this.slotReel.appendChild(div);
         });
+        
+        // Start at middle section so we have room to scroll
+        const itemHeight = 100;
+        const totalItems = displayNames.length;
+        this.slotReel.style.transform = `translateY(-${Math.floor(totalItems / 3) * itemHeight}px)`;
     }
 
     spinSlots(winner) {
         return new Promise(resolve => {
-            const itemHeight = 140;
-            const duration = 3000;
+            const itemHeight = 100;
+            const duration = 3000 * this.durationMultiplier;
             const startTime = Date.now();
             
-            // Find winner position in middle section
-            const winnerIndex = this.names.indexOf(winner);
-            const targetPosition = (this.names.length + winnerIndex) * itemHeight;
-            const totalDistance = targetPosition + this.names.length * itemHeight * 3;
+            // Get total number of displayed items
+            const totalItems = this.slotReel.querySelectorAll('.slot-name').length;
+            
+            // Get current position
+            const transform = this.slotReel.style.transform;
+            const match = transform.match(/translateY\(-?(\d+)px\)/);
+            let startPosition = match ? parseInt(match[1]) : totalItems / 2 * itemHeight;
+            
+            // Find a winner position in the second half of the reel
+            const items = Array.from(this.slotReel.querySelectorAll('.slot-name'));
+            const midPoint = Math.floor(items.length / 2);
+            let targetIndex = -1;
+            
+            // Find an instance of the winner in the middle section
+            for (let i = midPoint; i < items.length - 2; i++) {
+                if (items[i].textContent === winner) {
+                    targetIndex = i;
+                    break;
+                }
+            }
+            
+            // Fallback: find any instance
+            if (targetIndex === -1) {
+                targetIndex = items.findIndex(item => item.textContent === winner);
+            }
+            
+            // Calculate target position (offset by -1 to center in view)
+            let targetPosition = (targetIndex - 1) * itemHeight;
+            
+            // Ensure minimum spin distance
+            const minSpinDistance = totalItems / 4 * itemHeight * this.durationMultiplier;
+            let spinDistance = targetPosition - startPosition;
+            
+            // If we would spin backwards or not enough, add more distance
+            while (spinDistance < minSpinDistance) {
+                // Find next instance of winner
+                let nextWinnerOffset = items.slice(targetIndex + 1).findIndex(item => item.textContent === winner);
+                if (nextWinnerOffset !== -1) {
+                    targetIndex = targetIndex + 1 + nextWinnerOffset;
+                    targetPosition = (targetIndex - 1) * itemHeight;
+                    spinDistance = targetPosition - startPosition;
+                } else {
+                    spinDistance += totalItems / 2 * itemHeight;
+                }
+            }
+            
+            const finalPosition = startPosition + spinDistance;
+            
+            const slotWindow = this.slotReel.parentElement;
+            slotWindow.classList.remove('stopped');
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve();
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // Easing
-                const eased = 1 - Math.pow(1 - progress, 4);
-                const currentPosition = totalDistance * eased;
+                // Use a more balanced easing curve - cubic ease-out for smoother deceleration
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const currentPosition = startPosition + spinDistance * eased;
                 
-                this.slotReel.style.transform = `translateY(-${currentPosition % (this.names.length * itemHeight * 3)}px)`;
+                this.slotReel.style.transform = `translateY(-${currentPosition}px)`;
                 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    this.slotReel.style.transform = `translateY(-${targetPosition}px)`;
+                    this.slotReel.style.transform = `translateY(-${finalPosition}px)`;
+                    slotWindow.classList.add('stopped');
+                    this.highlightCenterSlot();
                     resolve();
                 }
             };
             
             animate();
         });
+    }
+
+    highlightCenterSlot() {
+        // Remove previous center highlights
+        this.slotReel.querySelectorAll('.slot-name').forEach(el => el.classList.remove('center'));
+        
+        // Calculate which item is in the center based on current transform
+        const transform = this.slotReel.style.transform;
+        const match = transform.match(/translateY\(-?(\d+)px\)/);
+        if (match) {
+            const offset = parseInt(match[1]);
+            const itemHeight = 100;
+            const centerIndex = Math.round(offset / itemHeight) + 1; // +1 for center position
+            const items = this.slotReel.querySelectorAll('.slot-name');
+            if (items[centerIndex]) {
+                items[centerIndex].classList.add('center');
+            }
+        }
     }
 
     // Claw Machine Preview
@@ -522,51 +763,59 @@ class RandomNamePicker {
         ctx.closePath();
         ctx.fill();
         
+        // Build weighted animals for preview
+        const weightedAnimals = [];
+        this.names.forEach((name, i) => {
+            const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+            for (let w = 0; w < weight; w++) {
+                weightedAnimals.push({
+                    name,
+                    emoji: animalEmojis[i % animalEmojis.length],
+                    color: colors[i % colors.length]
+                });
+            }
+        });
+        
         // Draw animals in pit
         const pitWidth = width - 160;
-        const animalSize = 55;
+        const animalSize = 45;
         const maxPerRow = Math.floor(pitWidth / animalSize);
-        const totalAnimals = this.names.length;
-        const row1Count = totalAnimals <= maxPerRow ? totalAnimals : Math.ceil(totalAnimals / 2);
-        const row2Count = totalAnimals - row1Count;
+        const totalAnimals = weightedAnimals.length;
+        const numRows = Math.ceil(totalAnimals / maxPerRow);
         
-        this.names.forEach((name, i) => {
-            let x, y;
-            if (i < row1Count) {
-                const rowSpacing = pitWidth / row1Count;
-                x = 40 + i * rowSpacing + rowSpacing / 2;
-                y = height - 70;
-            } else {
-                const rowIndex = i - row1Count;
-                const rowSpacing = pitWidth / row2Count;
-                x = 40 + rowIndex * rowSpacing + rowSpacing / 2;
-                y = height - 125;
-            }
+        weightedAnimals.forEach((animal, i) => {
+            const rowIndex = Math.floor(i / maxPerRow);
+            const colIndex = i % maxPerRow;
+            const itemsInRow = rowIndex < numRows - 1 ? maxPerRow : ((totalAnimals - 1) % maxPerRow) + 1;
+            const rowSpacing = pitWidth / itemsInRow;
+            
+            const x = 40 + colIndex * rowSpacing + rowSpacing / 2;
+            const y = height - 70 - rowIndex * 45;
             
             ctx.save();
             ctx.translate(x, y);
             
             // Circular background
             ctx.beginPath();
-            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
             ctx.fillStyle = '#fff';
             ctx.fill();
-            ctx.strokeStyle = colors[i % colors.length];
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = animal.color;
+            ctx.lineWidth = 2;
             ctx.stroke();
             
             // Emoji
-            ctx.font = '28px Arial';
+            ctx.font = '22px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(animalEmojis[i % animalEmojis.length], 0, 2);
+            ctx.fillText(animal.emoji, 0, 2);
             
-            // Name tag
-            ctx.fillStyle = colors[i % colors.length];
-            ctx.fillRect(-25, 27, 50, 14);
+            // Name tag (smaller)
+            ctx.fillStyle = animal.color;
+            ctx.fillRect(-18, 22, 36, 12);
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 8px Poppins';
-            ctx.fillText(name, 0, 35);
+            ctx.font = 'bold 7px Poppins';
+            ctx.fillText(animal.name.substring(0, 6), 0, 29);
             
             ctx.restore();
         });
@@ -671,9 +920,44 @@ class RandomNamePicker {
         this.names.forEach((name, i) => {
             const x = startX;
             const y = 50 + i * laneHeight + laneHeight / 2;
+            const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
             
             ctx.save();
             ctx.translate(x, y);
+            
+            // Draw weight balls behind the racer (if weights enabled and weight > 1)
+            if (this.weightsEnabled && weight > 1) {
+                const numBalls = weight - 1;
+                const ballRadius = 8;
+                
+                for (let b = 0; b < numBalls; b++) {
+                    const ballX = -30 - (b * (ballRadius * 2 + 5));
+                    
+                    // Chain
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(b === 0 ? -22 : ballX + ballRadius * 2 + 5, 0);
+                    ctx.lineTo(ballX + ballRadius, 0);
+                    ctx.stroke();
+                    
+                    // Ball
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.arc(ballX, 0, ballRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // W on ball
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 9px Poppins';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('W', ballX, 0);
+                }
+            }
             
             // Circular background
             ctx.fillStyle = '#fff';
@@ -748,6 +1032,9 @@ class RandomNamePicker {
             const x = 20 + (i % cols) * cellWidth + cellWidth / 2;
             const y = 50 + Math.floor(i / cols) * cellHeight + cellHeight / 2;
             
+            // Get weight as lives
+            const lives = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+            
             ctx.save();
             ctx.translate(x, y);
             
@@ -761,6 +1048,23 @@ class RandomNamePicker {
             ctx.roundRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, 8);
             ctx.fill();
             ctx.stroke();
+            
+            // Draw lives as hearts in top-right corner
+            if (lives > 0) {
+                const heartSize = Math.min(12, cellWidth / 8);
+                const heartsX = boxWidth/2 - 4;
+                const heartsY = -boxHeight/2 + 4;
+                
+                ctx.font = `${heartSize}px Arial`;
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'top';
+                
+                let heartStr = '';
+                for (let h = 0; h < lives; h++) {
+                    heartStr = '❤️' + heartStr;
+                }
+                ctx.fillText(heartStr, heartsX, heartsY);
+            }
             
             ctx.fillStyle = '#000';
             ctx.font = `bold ${Math.min(16, cellWidth / 6)}px Poppins`;
@@ -804,8 +1108,13 @@ class RandomNamePicker {
             const x = 30 + (i % cols) * cellWidth + cellWidth / 2;
             const y = 60 + Math.floor(i / cols) * cellHeight + cellHeight / 2;
             
+            // Get weight for font size scaling
+            const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+            const fontScale = 1 + (weight - 1) * 0.3; // 1.0, 1.3, 1.6, 1.9 for weights 1-4
+            const fontSize = Math.round(16 * fontScale);
+            
             ctx.fillStyle = colors[i % colors.length] + '66'; // Semi-dimmed
-            ctx.font = 'bold 16px Poppins';
+            ctx.font = `bold ${fontSize}px Poppins`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(name, x, y);
@@ -841,46 +1150,46 @@ class RandomNamePicker {
             const animalEmojis = ['🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐰', '🦊', '🐶', '🐱', '🐮', '🐔', '🐧', '🐺', '🐹', '🦉', '🐦', '🐤', '🐙', '🐝', '🐢'];
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
             
-            // Create animals with names - arrange in two neat rows
+            // Build weighted animals list - each person gets more animals based on weight
+            const weightedAnimals = [];
+            this.names.forEach((name, i) => {
+                const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+                for (let w = 0; w < weight; w++) {
+                    weightedAnimals.push({
+                        name,
+                        originalIndex: i,
+                        emoji: animalEmojis[i % animalEmojis.length],
+                        color: colors[i % colors.length]
+                    });
+                }
+            });
+            
+            // Create animals with names - arrange in rows
             const pitWidth = width - 160; // Leave space for chute on right
-            const animalSize = 55; // Width each animal takes up
+            const animalSize = 45; // Width each animal takes up (smaller for more animals)
             const maxPerRow = Math.floor(pitWidth / animalSize);
             
-            // Split into two rows if needed
-            const totalAnimals = this.names.length;
-            let row1Count, row2Count;
-            if (totalAnimals <= maxPerRow) {
-                // Single row
-                row1Count = totalAnimals;
-                row2Count = 0;
-            } else {
-                // Two rows - split evenly
-                row1Count = Math.ceil(totalAnimals / 2);
-                row2Count = totalAnimals - row1Count;
-            }
+            // Calculate rows needed
+            const totalAnimals = weightedAnimals.length;
+            const numRows = Math.ceil(totalAnimals / maxPerRow);
             
-            const animals = this.names.map((name, i) => {
-                let x, y;
-                if (i < row1Count) {
-                    // First row (front/bottom)
-                    const rowSpacing = pitWidth / row1Count;
-                    x = 40 + i * rowSpacing + rowSpacing / 2;
-                    y = height - 70;
-                } else {
-                    // Second row (back/top)
-                    const rowIndex = i - row1Count;
-                    const rowSpacing = pitWidth / row2Count;
-                    x = 40 + rowIndex * rowSpacing + rowSpacing / 2;
-                    y = height - 125;
-                }
+            const animals = weightedAnimals.map((animalData, i) => {
+                const rowIndex = Math.floor(i / maxPerRow);
+                const colIndex = i % maxPerRow;
+                const itemsInRow = rowIndex < numRows - 1 ? maxPerRow : ((totalAnimals - 1) % maxPerRow) + 1;
+                const rowSpacing = pitWidth / itemsInRow;
+                
+                const x = 40 + colIndex * rowSpacing + rowSpacing / 2;
+                const y = height - 70 - rowIndex * 50; // Stack rows upward
                 
                 return {
-                    name,
+                    name: animalData.name,
+                    originalIndex: animalData.originalIndex,
                     x,
                     y,
-                    radius: 25,
-                    emoji: animalEmojis[i % animalEmojis.length],
-                    color: colors[i % colors.length],
+                    radius: 22,
+                    emoji: animalData.emoji,
+                    color: animalData.color,
                     vx: 0,
                     vy: 0
                 };
@@ -896,10 +1205,10 @@ class RandomNamePicker {
                 grabbedAnimal: null
             };
             
-            // Pick winner (may change if fumble happens)
-            let winnerIndex = Math.floor(Math.random() * this.names.length);
-            let winner = this.names[winnerIndex];
-            let targetAnimal = animals[winnerIndex];
+            // Pick winner (may change if fumble happens) - pick from weighted animals array
+            let targetAnimalIndex = Math.floor(Math.random() * animals.length);
+            let targetAnimal = animals[targetAnimalIndex];
+            let winner = targetAnimal.name;
             claw.targetX = targetAnimal.x;
             
             // Fumble chances: 17% double fumble, 16% single fumble, 67% no fumble
@@ -992,6 +1301,12 @@ class RandomNamePicker {
             };
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve(null);
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 
                 // Clear canvas
@@ -1025,9 +1340,10 @@ class RandomNamePicker {
                 });
                 
                 // Claw movement logic
+                const speedFactor = 1 / this.durationMultiplier;
                 switch (claw.state) {
                     case 'moving':
-                        const moveSpeed = 3;
+                        const moveSpeed = 3 * speedFactor;
                         if (Math.abs(claw.x - claw.targetX) > moveSpeed) {
                             claw.x += claw.targetX > claw.x ? moveSpeed : -moveSpeed;
                         } else {
@@ -1037,7 +1353,7 @@ class RandomNamePicker {
                         break;
                         
                     case 'descending':
-                        claw.y += 4;
+                        claw.y += 4 * speedFactor;
                         if (claw.y >= targetAnimal.y - 30) {
                             claw.state = 'grabbing';
                             claw.openAngle = 0.5;
@@ -1048,17 +1364,17 @@ class RandomNamePicker {
                                     setTimeout(() => {
                                         claw.openAngle = 0.5;
                                         claw.state = 'ascending';
-                                    }, 300);
+                                    }, 300 * this.durationMultiplier);
                                 } else {
                                     claw.grabbedAnimal = targetAnimal;
                                     claw.state = 'ascending';
                                 }
-                            }, 400);
+                            }, 400 * this.durationMultiplier);
                         }
                         break;
                         
                     case 'ascending':
-                        claw.y -= 6;
+                        claw.y -= 6 * speedFactor;
                         if (claw.grabbedAnimal) {
                             claw.grabbedAnimal.x = claw.x;
                             claw.grabbedAnimal.y = claw.y + 50;
@@ -1067,10 +1383,10 @@ class RandomNamePicker {
                             if (claw.grabbedAnimal) {
                                 claw.state = 'moveToChute';
                             } else {
-                                // Fumbled - pick a new random target!
-                                winnerIndex = Math.floor(Math.random() * this.names.length);
-                                winner = this.names[winnerIndex];
-                                targetAnimal = animals[winnerIndex];
+                                // Fumbled - pick a new random target from animals!
+                                targetAnimalIndex = Math.floor(Math.random() * animals.length);
+                                targetAnimal = animals[targetAnimalIndex];
+                                winner = targetAnimal.name;
                                 claw.targetX = targetAnimal.x;
                                 claw.state = 'moving';
                             }
@@ -1080,18 +1396,18 @@ class RandomNamePicker {
                     case 'moveToChute':
                         const chuteX = width - 80;
                         if (claw.x < chuteX) {
-                            claw.x += 4;
+                            claw.x += 4 * speedFactor;
                             claw.grabbedAnimal.x = claw.x;
                         } else {
                             claw.state = 'dropping';
                             claw.openAngle = 0.5;
-                            claw.grabbedAnimal.vy = 2;
+                            claw.grabbedAnimal.vy = 2 * speedFactor;
                         }
                         break;
                         
                     case 'dropping':
                         if (claw.grabbedAnimal) {
-                            claw.grabbedAnimal.vy += 0.5;
+                            claw.grabbedAnimal.vy += 0.5 * speedFactor;
                             claw.grabbedAnimal.y += claw.grabbedAnimal.vy;
                             
                             if (claw.grabbedAnimal.y > height - 50) {
@@ -1151,7 +1467,7 @@ class RandomNamePicker {
             const raceDistance = finishX - startX;
             
             // Pre-determine loser (race always picks the loser)
-            const pickedIndex = Math.floor(Math.random() * this.names.length);
+            const pickedIndex = this.getWeightedRandomIndex();
             const isLoserMode = true; // Race always picks the loser
             const picked = this.names[pickedIndex];
             
@@ -1168,6 +1484,9 @@ class RandomNamePicker {
                     baseSpeed = isPicked ? 0.43 : 0.39 + Math.random() * 0.03;
                 }
                 
+                // Get weight for this racer
+                const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+                
                 return {
                     name,
                     x: startX,
@@ -1179,6 +1498,7 @@ class RandomNamePicker {
                     color: colors[i % colors.length],
                     finished: false,
                     finishOrder: 0,
+                    weight: weight, // Store weight for drawing
                     // Pre-generate speed variation curve for natural movement
                     speedVariations: Array.from({length: 30}, () => 0.95 + Math.random() * 0.1)
                 };
@@ -1189,7 +1509,7 @@ class RandomNamePicker {
             let raceFinished = false;
             let finishCounter = 0;
             const startTime = Date.now();
-            const raceDuration = 20000; // 20 seconds - longer race
+            const raceDuration = 20000 * this.durationMultiplier; // 20 seconds - longer race
             
             const drawTrack = () => {
                 // Sky
@@ -1233,6 +1553,41 @@ class RandomNamePicker {
                 ctx.save();
                 ctx.translate(racer.x, racer.y);
                 
+                // Draw weight balls behind the racer (if weights enabled and weight > 1)
+                if (this.weightsEnabled && racer.weight > 1) {
+                    const numBalls = racer.weight - 1;
+                    const ballRadius = 8;
+                    const chainLength = 15;
+                    
+                    for (let b = 0; b < numBalls; b++) {
+                        const ballX = -30 - (b * (ballRadius * 2 + 5));
+                        
+                        // Chain
+                        ctx.strokeStyle = '#666';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(b === 0 ? -22 : ballX + ballRadius * 2 + 5, 0);
+                        ctx.lineTo(ballX + ballRadius, 0);
+                        ctx.stroke();
+                        
+                        // Ball
+                        ctx.fillStyle = '#333';
+                        ctx.beginPath();
+                        ctx.arc(ballX, 0, ballRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = '#555';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        
+                        // Weight number on ball
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 9px Poppins';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('W', ballX, 0);
+                    }
+                }
+                
                 // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.beginPath();
@@ -1274,6 +1629,12 @@ class RandomNamePicker {
             };
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve(null);
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 
                 ctx.clearRect(0, 0, width, height);
@@ -1434,7 +1795,7 @@ class RandomNamePicker {
             const height = rect.height;
             
             // Pick winner ahead of time
-            const winnerIndex = Math.floor(Math.random() * this.names.length);
+            const winnerIndex = this.getWeightedRandomIndex();
             const winner = this.names[winnerIndex];
             
             // Create contestants
@@ -1443,31 +1804,39 @@ class RandomNamePicker {
             const cellWidth = (width - 40) / cols;
             const cellHeight = (height - 100) / rows;
             
-            const contestants = this.names.map((name, i) => ({
-                name,
-                x: 20 + (i % cols) * cellWidth + cellWidth / 2,
-                y: 50 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
-                alive: true,
-                opacity: 1,
-                scale: 1,
-                eliminated: false,
-                eliminationTime: 0,
-                isWinner: name === winner
-            }));
+            const contestants = this.names.map((name, i) => {
+                // Get weight as lives (1-4 lives based on weight)
+                const lives = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+                
+                return {
+                    name,
+                    x: 20 + (i % cols) * cellWidth + cellWidth / 2,
+                    y: 50 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
+                    alive: true,
+                    opacity: 1,
+                    scale: 1,
+                    maxLives: lives,
+                    lives: lives, // Current lives
+                    eliminated: false,
+                    eliminationTime: 0,
+                    lastHitTime: 0, // Track when last hit for flash effect
+                    isWinner: name === winner
+                };
+            });
             
-            // Create elimination order (winner is never eliminated)
-            const eliminationOrder = contestants
-                .filter(c => !c.isWinner)
-                .sort(() => Math.random() - 0.5);
-            
-            let eliminationIndex = 0;
-            let lastEliminationTime = 0;
-            let baseInterval = 800; // Start slower
+            let lastHitTime = 0;
+            let baseInterval = 600 * this.durationMultiplier;
             const startTime = Date.now();
             
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve(null);
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 
                 // Clear canvas
@@ -1484,18 +1853,27 @@ class RandomNamePicker {
                 const aliveCount = contestants.filter(c => c.alive).length;
                 ctx.fillText(`⚔️ BATTLE ROYALE - ${aliveCount} Remaining ⚔️`, width / 2, 30);
                 
-                // Eliminate contestants with accelerating speed
-                if (eliminationIndex < eliminationOrder.length) {
-                    // Speed up as we go
-                    const progress = eliminationIndex / eliminationOrder.length;
-                    const interval = Math.max(100, baseInterval * (1 - progress * 0.9));
+                // Process hits - randomly target alive non-winners with equal probability
+                const aliveTargets = contestants.filter(c => c.alive && !c.isWinner);
+                
+                if (aliveTargets.length > 0) {
+                    // Speed up as fewer contestants remain
+                    const progress = 1 - (aliveTargets.length / (contestants.length - 1));
+                    const interval = Math.max(80, baseInterval * (1 - progress * 0.85));
                     
-                    if (elapsed - lastEliminationTime > interval) {
-                        eliminationOrder[eliminationIndex].alive = false;
-                        eliminationOrder[eliminationIndex].eliminated = true;
-                        eliminationOrder[eliminationIndex].eliminationTime = elapsed;
-                        eliminationIndex++;
-                        lastEliminationTime = elapsed;
+                    if (elapsed - lastHitTime > interval) {
+                        // Randomly pick from alive contestants (equal chance for everyone)
+                        const target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+                        target.lives--;
+                        target.lastHitTime = elapsed;
+                        
+                        if (target.lives <= 0) {
+                            target.alive = false;
+                            target.eliminated = true;
+                            target.eliminationTime = elapsed;
+                        }
+                        
+                        lastHitTime = elapsed;
                     }
                 }
                 
@@ -1515,10 +1893,19 @@ class RandomNamePicker {
                     ctx.translate(c.x, c.y);
                     ctx.scale(c.scale, c.scale);
                     
+                    // Flash red when hit
+                    const timeSinceHit = elapsed - c.lastHitTime;
+                    const isFlashing = timeSinceHit < 200 && c.lastHitTime > 0;
+                    
                     // Background box
                     const boxWidth = cellWidth - 10;
                     const boxHeight = cellHeight - 10;
-                    ctx.fillStyle = c.alive ? colors[i % colors.length] : '#333';
+                    
+                    if (isFlashing) {
+                        ctx.fillStyle = '#ff0000';
+                    } else {
+                        ctx.fillStyle = c.alive ? colors[i % colors.length] : '#333';
+                    }
                     ctx.strokeStyle = c.alive ? '#fff' : '#666';
                     ctx.lineWidth = c.isWinner && aliveCount === 1 ? 4 : 2;
                     
@@ -1528,6 +1915,28 @@ class RandomNamePicker {
                     ctx.roundRect(-boxWidth/2, -boxHeight/2, boxWidth, boxHeight, radius);
                     ctx.fill();
                     ctx.stroke();
+                    
+                    // Draw lives as hearts in top-right corner
+                    if (c.alive || c.opacity > 0) {
+                        const heartSize = Math.min(12, cellWidth / 8);
+                        const heartsX = boxWidth/2 - 4;
+                        const heartsY = -boxHeight/2 + 4;
+                        
+                        ctx.font = `${heartSize}px Arial`;
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'top';
+                        
+                        // Draw remaining lives as red hearts, lost lives as grey/empty
+                        let heartStr = '';
+                        for (let h = 0; h < c.maxLives; h++) {
+                            if (h < c.lives) {
+                                heartStr = '❤️' + heartStr; // Red heart for remaining lives
+                            } else {
+                                heartStr = '🖤' + heartStr; // Black heart for lost lives
+                            }
+                        }
+                        ctx.fillText(heartStr, heartsX, heartsY);
+                    }
                     
                     // Name
                     ctx.fillStyle = c.alive ? '#000' : '#666';
@@ -1549,8 +1958,8 @@ class RandomNamePicker {
                     ctx.restore();
                 });
                 
-                // Check if done
-                if (aliveCount === 1 && eliminationIndex >= eliminationOrder.length) {
+                // Check if done - only winner remains alive
+                if (aliveCount === 1) {
                     // Draw winner celebration
                     const winnerContestant = contestants.find(c => c.isWinner);
                     
@@ -1591,7 +2000,7 @@ class RandomNamePicker {
             const height = rect.height;
             
             // Pick winner
-            const winnerIndex = Math.floor(Math.random() * this.names.length);
+            const winnerIndex = this.getWeightedRandomIndex();
             const winner = this.names[winnerIndex];
             
             // Create name positions in a grid
@@ -1600,12 +2009,20 @@ class RandomNamePicker {
             const cellWidth = (width - 60) / cols;
             const cellHeight = (height - 80) / rows;
             
-            const namePositions = this.names.map((name, i) => ({
-                name,
-                x: 30 + (i % cols) * cellWidth + cellWidth / 2,
-                y: 60 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
-                isWinner: name === winner
-            }));
+            const namePositions = this.names.map((name, i) => {
+                // Get weight for font size scaling
+                const weight = this.weightsEnabled ? (this.weights[i] || 1) : 1;
+                const fontScale = 1 + (weight - 1) * 0.3; // 1.0, 1.3, 1.6, 1.9 for weights 1-4
+                
+                return {
+                    name,
+                    x: 30 + (i % cols) * cellWidth + cellWidth / 2,
+                    y: 60 + Math.floor(i / cols) * cellHeight + cellHeight / 2,
+                    isWinner: name === winner,
+                    fontScale: fontScale,
+                    weight: weight
+                };
+            });
             
             // Spotlight state
             let spotlightX = width / 2;
@@ -1613,9 +2030,9 @@ class RandomNamePicker {
             let spotlightRadius = 100;
             
             // Randomize duration (5-9 seconds) and sweep speed
-            const sweepDuration = 3000 + Math.random() * 3000; // 3-6 seconds sweeping
-            const homingDuration = 500; // 0.5 seconds homing
-            const duration = sweepDuration + homingDuration + 1000; // Plus 1s locked
+            const sweepDuration = (3000 + Math.random() * 3000) * this.durationMultiplier; // 3-6 seconds sweeping
+            const homingDuration = 500 * this.durationMultiplier; // 0.5 seconds homing
+            const duration = sweepDuration + homingDuration + 1000 * this.durationMultiplier; // Plus 1s locked
             
             const startTime = Date.now();
             let phase = 'sweeping'; // sweeping, homing, locked
@@ -1650,6 +2067,12 @@ class RandomNamePicker {
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#fd79a8', '#a29bfe', '#00b894', '#e17055'];
             
             const animate = () => {
+                // Check if animation was cancelled
+                if (this.animationCancelled) {
+                    resolve(null);
+                    return;
+                }
+                
                 const elapsed = Date.now() - startTime;
                 const progress = elapsed / duration;
                 
@@ -1662,7 +2085,8 @@ class RandomNamePicker {
                 
                 namePositions.forEach((pos, i) => {
                     ctx.fillStyle = colors[i % colors.length] + '33'; // Very dimmed
-                    ctx.font = 'bold 16px Poppins';
+                    const fontSize = Math.round(16 * pos.fontScale);
+                    ctx.font = `bold ${fontSize}px Poppins`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pos.name, pos.x, pos.y);
@@ -1747,11 +2171,14 @@ class RandomNamePicker {
                 // Draw illuminated names
                 namePositions.forEach((pos, i) => {
                     const dist = Math.sqrt(Math.pow(pos.x - spotlightX, 2) + Math.pow(pos.y - spotlightY, 2));
-                    if (dist < spotlightRadius * 1.2) {
-                        const brightness = 1 - dist / (spotlightRadius * 1.2);
+                    // Larger spotlight detection radius for bigger names
+                    const detectionRadius = spotlightRadius * (1.2 + (pos.fontScale - 1) * 0.3);
+                    if (dist < detectionRadius) {
+                        const brightness = 1 - dist / detectionRadius;
                         ctx.fillStyle = colors[i % colors.length];
                         ctx.globalAlpha = brightness;
-                        ctx.font = 'bold 18px Poppins';
+                        const fontSize = Math.round(18 * pos.fontScale);
+                        ctx.font = `bold ${fontSize}px Poppins`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
                         ctx.fillText(pos.name, pos.x, pos.y);
@@ -1818,6 +2245,7 @@ class RandomNamePicker {
             const index = this.names.indexOf(this.lastWinner);
             if (index > -1) {
                 this.names.splice(index, 1);
+                this.weights.splice(index, 1);
                 this.updateNamesList();
                 this.saveToStorage();
                 this.updateAnimations();
@@ -1834,6 +2262,21 @@ class RandomNamePicker {
     
     closeModal() {
         this.winnerModal.classList.remove('show');
+        // Reset slot machine position for next spin
+        this.resetSlotPosition();
+    }
+
+    resetSlotPosition() {
+        if (this.names.length > 0) {
+            const itemHeight = 100;
+            this.slotReel.style.transform = `translateY(-${this.names.length * itemHeight}px)`;
+            // Remove stopped state and center highlight
+            const slotWindow = this.slotReel.parentElement;
+            if (slotWindow) {
+                slotWindow.classList.remove('stopped');
+            }
+            this.slotReel.querySelectorAll('.slot-name').forEach(el => el.classList.remove('center'));
+        }
     }
 
     // Confetti

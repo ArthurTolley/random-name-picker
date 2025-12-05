@@ -89,6 +89,80 @@ body {
     border-color: var(--primary);
 }
 
+/* Duration Slider */
+.duration-slider-container {
+    padding: 12px;
+    background: var(--background);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.duration-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.duration-label span:last-child {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.duration-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-light);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.duration-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.duration-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.5);
+}
+
+.duration-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.duration-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.5);
+}
+
+.duration-hints {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
 .bulk-add {
     display: flex;
     flex-direction: column;
@@ -121,6 +195,60 @@ body {
     padding: 5px;
 }
 
+/* Weights Toggle */
+.weights-toggle-container {
+    padding: 10px 12px;
+    background: var(--background);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.weights-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.weights-toggle input {
+    display: none;
+}
+
+.toggle-slider {
+    width: 40px;
+    height: 22px;
+    background: var(--surface-light);
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: var(--text);
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.weights-toggle input:checked + .toggle-slider {
+    background: var(--primary);
+}
+
+.weights-toggle input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+}
+
+.toggle-label {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
 .name-item {
     display: flex;
     align-items: center;
@@ -129,6 +257,51 @@ body {
     background: var(--surface-light);
     border-radius: 8px;
     animation: slideIn 0.3s ease;
+    gap: 8px;
+}
+
+.name-item .name-text {
+    flex: 1;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.name-item .weight-selector {
+    display: none;
+    align-items: center;
+    gap: 4px;
+}
+
+.weights-enabled .name-item .weight-selector {
+    display: flex;
+}
+
+.weight-selector input {
+    width: 45px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: var(--background);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.weight-selector input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.weight-selector input::-webkit-inner-spin-button,
+.weight-selector input::-webkit-outer-spin-button {
+    opacity: 1;
+}
+
+.weight-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }
 
 @keyframes slideIn {
@@ -313,7 +486,7 @@ body {
 
 .slot-window {
     width: 350px;
-    height: 140px;
+    height: 300px;
     background: var(--background);
     border-radius: 12px;
     overflow: hidden;
@@ -327,9 +500,22 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    height: 30px;
+    height: 50px;
     z-index: 5;
     pointer-events: none;
+}
+
+.slot-window .center-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100px;
+    height: 100px;
+    border-top: 2px solid var(--primary);
+    border-bottom: 2px solid var(--primary);
+    pointer-events: none;
+    z-index: 4;
+    background: rgba(99, 102, 241, 0.1);
 }
 
 .slot-window::before {
@@ -350,14 +536,23 @@ body {
 }
 
 .slot-reel .slot-name {
-    height: 140px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 600;
-    color: var(--text);
+    color: var(--text-muted);
     width: 100%;
+    opacity: 0.5;
+    transition: opacity 0.3s, color 0.3s, transform 0.3s;
+}
+
+.slot-window.stopped .slot-name.center {
+    color: var(--text);
+    opacity: 1;
+    font-size: 2rem;
+    transform: scale(1.1);
 }
 
 /* Claw Machine */
@@ -464,6 +659,13 @@ body {
 }
 
 /* Pick Button */
+.pick-controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+}
+
 .btn-pick {
     background: linear-gradient(135deg, var(--primary), #a855f7);
     color: white;
@@ -487,6 +689,21 @@ body {
 
 .btn-pick.spinning {
     animation: pulse 0.5s infinite;
+}
+
+.btn-stop {
+    background: linear-gradient(135deg, var(--danger), #dc2626);
+    color: white;
+    font-size: 1.1rem;
+    padding: 18px 30px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+    transition: all 0.3s;
+}
+
+.btn-stop:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 30px rgba(239, 68, 68, 0.5);
 }
 
 @keyframes pulse {
