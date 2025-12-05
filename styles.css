@@ -163,29 +163,6 @@ body {
     margin-top: 4px;
 }
 
-.bulk-add {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.bulk-add textarea {
-    padding: 10px;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    background: var(--background);
-    color: var(--text);
-    font-size: 0.85rem;
-    resize: vertical;
-    min-height: 80px;
-    font-family: inherit;
-}
-
-.bulk-add textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
 .names-list {
     flex: 1;
     overflow-y: auto;
