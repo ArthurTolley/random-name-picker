@@ -4,27 +4,28 @@ A fun, interactive random name picker with multiple animation styles. Hosted ent
 
 ## Features
 
-- **4 Animation Styles:**
-  - 🎡 **Spin Wheel** - Classic spinning wheel of fortune with colorful segments
-  - 🎰 **Slot Machine** - Vegas-style slot machine animation
-  - 🪝 **Claw Machine** - Arcade claw grabs capsules containing names, with occasional fumbles for comedic effect!
-  - 🏁 **Race** - Emoji racers (horses, cars, rockets, etc.) compete in an exciting race to the finish line
+- **6 Animation Styles:**
+  - 🎡 **Spin Wheel** — classic wheel with weighted slices
+  - 🎰 **Slots** — stacked reel animation
+  - 🪝 **Claw** — arcade claw with occasional fumbles
+  - 🏁 **Race** — loser-mode race for tension
+  - ⚔️ **Battle Royale** — multi-hit eliminations
+  - 🔦 **Spotlight** — sweeping spotlight reveal
 
-- **Easy Name Management:**
-  - Add names one at a time
-  - Bulk add multiple names (one per line)
-  - Remove individual names
-  - Clear all names
+- **Controls & Options:**
+  - Animation speed slider (0.25×–3×)
+  - Optional weight toggles per name
+  - Clear-all and sample-list loader
 
-- **Winner Popup:**
-  - Popup announces the winner
-  - Remove winner from list
-  - Confetti celebration effect
+- **Sound & Celebration:**
+  - Applause plays on winner reveal
+  - Confetti burst on winner
 
-- **Persistent Storage:**
-  - Names are saved in browser's localStorage
+- **Name Management:**
+  - Add names, remove individually, clear all
+  - Weights persist with names in localStorage
 
-- **Responsive Design:**
+- **Responsive:**
   - Works on desktop, tablet, and mobile
 
 ## Quick Start
