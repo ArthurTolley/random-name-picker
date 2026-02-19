@@ -5,9 +5,9 @@ const WHEEL_COLORS = [
 const ANIMAL_EMOJIS = ['🐻', '🐼', '🐨', '🦁', '🐯', '🐸', '🐵', '🐰', '🦊', '🐶', '🐱', '🐮', '🐔', '🐧', '🐺', '🐹', '🦉', '🐦', '🐤', '🐙', '🐝', '🐢'];
 const RACER_EMOJIS = ['🐎', '🚗', '🐢', '🚀', '🏃', '🐇', '🦊', '🐕', '🚲', '🛵'];
 const DEFAULT_SAMPLE_NAMES = [
-    'Arthur', 'Charlie', 'Drake', 'Elena', 'Emily', 'Gareth',
+    'Charlie', 'Elena', 'Gareth',
     'Ian', 'Isabela', 'Laura', 'Michael', 'Rahul', 'Sam I',
-    'Sergi', 'Tanmaya', 'Tessa', 'Xan'
+    'Sergi', 'Tanmaya', 'Tessa',
 ];
 const CONFETTI_COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f97316', '#22c55e', '#eab308'];
 const SLOT_ITEM_HEIGHT = 100;
