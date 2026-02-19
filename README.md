@@ -1,5 +1,7 @@
 # Random Name Picker
 
+Hosted at: [https://arthurtolley.github.io/random-name-picker/](https://arthurtolley.github.io/random-name-picker/)
+
 A fun, interactive random name picker with multiple animation styles. Hosted entirely on GitHub Pages.
 
 ## Features
